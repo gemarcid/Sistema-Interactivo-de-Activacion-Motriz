@@ -17,7 +17,7 @@ const {
   bodyState,
 } = useCamera()
 
-const { activeProfile } = useProfiles()
+const { activeProfile, isLeftHanded, isRightHanded } = useProfiles()
 
 onMounted(() => {
   resizeCanvas()
@@ -79,8 +79,10 @@ function drawCalibrationSilhouette(ctx, width, height, aligned, detected) {
     ctx.shadowBlur = 24
   }
 
-  // Proportional human guide centered on screen
-  const cx = width * 0.42 // Centered towards the camera viewing area (leaving right sidebar clear)
+  // Desplazamiento ergonómico de la silueta:
+  // Si es zurdo, la silueta se desplaza a la derecha (cx = 0.58) para dejar la columna de botones a la izquierda.
+  // Si es diestro, la silueta se desplaza a la izquierda (cx = 0.42) dejando los botones a la derecha.
+  const cx = isLeftHanded.value ? width * 0.58 : width * 0.42
   const headRadius = height * 0.08
   const headCy = height * 0.22
 
@@ -157,7 +159,10 @@ function handleExit() {
     <!-- Dashed Silhouette Fullscreen Overlay Canvas -->
     <canvas ref="canvasRef" class="silhouette-canvas"></canvas>
 
-    <div class="prep-ui-layout">
+    <div
+      class="prep-ui-layout"
+      :class="{ 'prep-handed-left': isLeftHanded, 'prep-handed-right': isRightHanded }"
+    >
       <!-- Left / Center: Status Feedback -->
       <div class="prep-center-info">
         <div
@@ -177,13 +182,16 @@ function handleExit() {
         </div>
 
         <div v-if="activeProfile" class="rf7-calibration-tag">
-          <strong>Calibración Antropométrica (RF7):</strong>
-          <span>Estatura: {{ activeProfile.heightCm }} cm • Punto central ajustado a tu campo de visión</span>
+          <strong>Calibración Personalizada (RF7):</strong>
+          <span>
+            Estatura: {{ activeProfile.heightCm }} cm • Mano dominante:
+            {{ isLeftHanded ? 'Izquierda 👈 (Botones a la izquierda)' : 'Derecha 👉 (Botones a la derecha)' }}
+          </span>
         </div>
       </div>
 
-      <!-- Right Column: Advice Card + Actions -->
-      <div class="prep-right-dock">
+      <!-- Advice Card + Actions (Se reposiciona a la izquierda o derecha según mano dominante) -->
+      <div class="prep-dock-card">
         <div class="motriz-card advice-card">
           <div class="advice-header-row">
             <h2 class="advice-title">¡Prepárate!</h2>
@@ -191,7 +199,9 @@ function handleExit() {
               ✕ Salir
             </button>
           </div>
-          <p class="advice-lead">Colócate en el centro de la cámara</p>
+          <p class="advice-lead">
+            Colócate en el centro • Botón accesible para mano {{ isLeftHanded ? 'izquierda 👈' : 'derecha 👉' }}
+          </p>
 
           <div class="advice-list">
             <div class="advice-row">
@@ -267,6 +277,12 @@ function handleExit() {
   justify-content: space-between;
   padding: 30px 40px 40px;
   box-sizing: border-box;
+  transition: all 0.35s ease;
+}
+
+/* En modo zurdo: la tarjeta con el botón Comenzar se coloca a la izquierda */
+.prep-handed-left {
+  flex-direction: row-reverse;
 }
 
 .prep-center-info {
@@ -326,12 +342,13 @@ function handleExit() {
   color: var(--motriz-red-primary);
 }
 
-/* Right Dock */
-.prep-right-dock {
+/* Dock Card con botón Comenzar */
+.prep-dock-card {
   width: 380px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  transition: all 0.35s ease;
 }
 
 .advice-card {
@@ -350,28 +367,27 @@ function handleExit() {
 
 .advice-title {
   margin: 0;
-  font-size: 2rem;
+  font-size: 1.7rem;
   font-weight: 900;
-  color: var(--motriz-red-primary);
+  color: var(--motriz-text-main);
 }
 
 .btn-mini-exit {
-  padding: 6px 14px;
-  font-size: 0.88rem;
+  padding: 6px 12px;
+  font-size: 0.85rem;
 }
 
 .advice-lead {
-  margin: 0 0 24px;
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   color: var(--motriz-text-muted);
-  font-weight: 700;
+  margin: 0 0 20px;
 }
 
 .advice-list {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  margin-bottom: 28px;
+  gap: 16px;
+  margin-bottom: 26px;
 }
 
 .advice-row {
@@ -381,34 +397,49 @@ function handleExit() {
 }
 
 .advice-bubble {
-  font-size: 1.6rem;
-  width: 44px;
-  height: 44px;
-  background: #FDF2E9;
+  font-size: 1.45rem;
+  line-height: 1;
+  padding: 6px;
+  background: #FFF5EA;
   border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .advice-row strong {
   display: block;
-  font-size: 1rem;
+  font-size: 0.98rem;
   color: var(--motriz-text-main);
-  margin-bottom: 2px;
 }
 
 .advice-row p {
-  margin: 0;
+  margin: 2px 0 0;
   font-size: 0.85rem;
   color: var(--motriz-text-muted);
-  line-height: 1.35;
+}
+
+.advice-action-box {
+  display: flex;
+  justify-content: stretch;
 }
 
 .btn-commence {
   width: 100%;
-  padding: 16px 28px;
-  font-size: 1.35rem;
+  padding: 18px 24px;
+  font-size: 1.4rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .prep-ui-layout {
+    flex-direction: column-reverse !important;
+    gap: 20px;
+    padding: 16px;
+  }
+  .prep-dock-card {
+    width: 100%;
+  }
 }
 </style>

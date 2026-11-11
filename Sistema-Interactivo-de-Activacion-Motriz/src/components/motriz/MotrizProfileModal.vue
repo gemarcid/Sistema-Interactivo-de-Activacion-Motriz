@@ -5,16 +5,17 @@ import { playClickTone, playSelectTone } from '../../composables/useAudio'
 
 const emit = defineEmits(['close'])
 
-const { profiles, activeProfile, selectProfile, addProfile } = useProfiles()
+const { profiles, activeProfile, selectProfile, addProfile, isLeftHanded, isRightHanded } = useProfiles()
 
 const isCreating = ref(false)
 const newName = ref('')
 const newAge = ref(72)
 const newHeight = ref(160)
+const newManoDominante = ref('DERECHA')
 const newDifficulty = ref('facil')
-const newAvatar = ref('👵')
+const newAvatar = ref('👴')
 
-const avatarOptions = ['👵', '👴', '👩', '👨', '🧑']
+const avatarOptions = ['👵', '👴', '👩', '👨', '🧑', '🌸', '🌿']
 
 function handleSelect(id) {
   playSelectTone()
@@ -22,13 +23,14 @@ function handleSelect(id) {
   emit('close')
 }
 
-function handleCreate() {
+async function handleCreate() {
   if (!newName.value.trim()) return
   playSelectTone()
-  addProfile({
+  await addProfile({
     name: newName.value,
     age: newAge.value,
     heightCm: newHeight.value,
+    mano_dominante: newManoDominante.value,
     difficulty: newDifficulty.value,
     avatar: newAvatar.value,
   })
@@ -44,7 +46,10 @@ function handleClose() {
 
 <template>
   <div class="motriz-modal-overlay" @click.self="handleClose">
-    <div class="motriz-card profile-modal-card">
+    <div
+      class="motriz-card profile-modal-card"
+      :class="{ 'card-handed-left': isLeftHanded, 'card-handed-right': isRightHanded }"
+    >
       <div class="modal-top">
         <h2 class="profile-modal-title">
           {{ isCreating ? 'Crear Nuevo Perfil' : 'Perfiles de Jugador' }}
@@ -55,11 +60,11 @@ function handleClose() {
       <!-- Create Form -->
       <div v-if="isCreating" class="create-profile-form">
         <div class="form-group">
-          <label class="form-label">Nombre del Jugador / Paciente</label>
+          <label class="form-label">Nombre del Abuelo / Paciente</label>
           <input
             v-model="newName"
             type="text"
-            placeholder="Ej. Abuelita Rosa"
+            placeholder="Ej. Abuelito Hernán"
             class="motriz-input"
             autofocus
           />
@@ -87,12 +92,35 @@ function handleClose() {
               max="220"
               class="motriz-input"
             />
-            <span class="input-hint">RF7: Calibra el punto central y la altura de juego</span>
+            <span class="input-hint">Calibra el punto central y la altura</span>
+          </div>
+        </div>
+
+        <!-- Mano Dominante (Atributo de init.sql) -->
+        <div class="form-group">
+          <label class="form-label">Mano Dominante (Adaptará los botones)</label>
+          <div class="hand-options">
+            <button
+              type="button"
+              class="hand-pill"
+              :class="{ 'hand-pill-active': newManoDominante === 'IZQUIERDA' }"
+              @click="newManoDominante = 'IZQUIERDA'"
+            >
+              👈 Mano Izquierda (Zurdo)
+            </button>
+            <button
+              type="button"
+              class="hand-pill"
+              :class="{ 'hand-pill-active': newManoDominante === 'DERECHA' }"
+              @click="newManoDominante = 'DERECHA'"
+            >
+              👉 Mano Derecha (Diestro)
+            </button>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Nivel de Movilidad / Dificultad (RF5)</label>
+          <label class="form-label">Nivel de Movilidad / Dificultad</label>
           <div class="difficulty-options">
             <button
               type="button"
@@ -137,7 +165,10 @@ function handleClose() {
           </div>
         </div>
 
-        <div class="form-actions">
+        <div
+          class="form-actions"
+          :class="{ 'actions-align-left': newManoDominante === 'IZQUIERDA', 'actions-align-right': newManoDominante === 'DERECHA' }"
+        >
           <button
             type="button"
             class="btn-motriz-secondary form-btn"
@@ -151,7 +182,7 @@ function handleClose() {
             :disabled="!newName.trim()"
             @click="handleCreate"
           >
-            Guardar Perfil
+            Guardar en Base de Datos
           </button>
         </div>
       </div>
@@ -170,10 +201,13 @@ function handleClose() {
             :class="{ 'profile-item-active': activeProfile?.id === p.id }"
             @click="handleSelect(p.id)"
           >
-            <span class="p-avatar">{{ p.avatar }}</span>
+            <span class="p-avatar">{{ p.avatar || '👴' }}</span>
             <div class="p-details">
               <strong class="p-name">{{ p.name }}</strong>
               <span class="p-meta">{{ p.age }} años • {{ p.heightCm }} cm</span>
+              <span class="p-hand-tag">
+                Mano: <strong>{{ p.mano_dominante === 'IZQUIERDA' ? 'Izquierda 👈' : 'Derecha 👉' }}</strong>
+              </span>
               <span class="p-diff">Movilidad: {{ p.difficulty }}</span>
             </div>
             <div v-if="activeProfile?.id === p.id" class="p-badge-active">
@@ -182,7 +216,10 @@ function handleClose() {
           </div>
         </div>
 
-        <div class="profiles-list-actions">
+        <div
+          class="profiles-list-actions"
+          :class="{ 'actions-align-left': isLeftHanded, 'actions-align-right': isRightHanded }"
+        >
           <button
             type="button"
             class="btn-motriz-primary btn-add-p"
@@ -203,9 +240,15 @@ function handleClose() {
 <style scoped>
 .profile-modal-card {
   width: 100%;
-  max-width: 620px;
+  max-width: 660px;
   padding: 34px 38px;
   background: #FFFDF9;
+  transition: all 0.3s ease;
+}
+
+/* Orientación de cabecera en modo zurdo */
+.card-handed-left .modal-top {
+  flex-direction: row-reverse;
 }
 
 .modal-top {
@@ -232,95 +275,20 @@ function handleClose() {
   font-weight: 800;
   color: var(--motriz-text-muted);
   cursor: pointer;
+  transition: all 0.15s;
+}
+
+.close-x-btn:hover {
+  background: #8C1D2C;
+  color: #FFF;
 }
 
 .section-desc {
   margin: 0 0 20px;
   color: var(--motriz-text-muted);
   font-size: 0.95rem;
-  line-height: 1.4;
 }
 
-.profiles-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-height: 320px;
-  overflow-y: auto;
-  margin-bottom: 24px;
-}
-
-.profile-item-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: #FDFBF7;
-  border: 2px solid #EADBCC;
-  border-radius: 20px;
-  padding: 14px 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.profile-item-card:hover {
-  border-color: var(--motriz-red-primary);
-  background: #FFFFFF;
-  transform: translateY(-2px);
-}
-
-.profile-item-active {
-  border-color: var(--motriz-red-primary);
-  background: #FFF7F5;
-  box-shadow: 0 0 0 2px var(--motriz-red-primary);
-}
-
-.p-avatar {
-  font-size: 2.2rem;
-}
-
-.p-details {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-}
-
-.p-name {
-  font-size: 1.15rem;
-  color: var(--motriz-text-main);
-}
-
-.p-meta {
-  font-size: 0.85rem;
-  color: var(--motriz-text-muted);
-}
-
-.p-diff {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #B45309;
-  text-transform: capitalize;
-}
-
-.p-badge-active {
-  background: var(--motriz-red-primary);
-  color: #FFFFFF;
-  font-size: 0.78rem;
-  font-weight: 800;
-  padding: 4px 12px;
-  border-radius: 9999px;
-}
-
-.profiles-list-actions {
-  display: flex;
-  justify-content: center;
-}
-
-.btn-add-p {
-  padding: 14px 32px;
-  font-size: 1.15rem;
-}
-
-/* Form */
 .create-profile-form {
   display: flex;
   flex-direction: column;
@@ -333,94 +301,203 @@ function handleClose() {
   gap: 6px;
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
 .form-label {
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   font-weight: 800;
   color: var(--motriz-text-main);
 }
 
-.motriz-input {
-  background: #FDFBF7;
-  border: 2px solid #E2D5C4;
-  border-radius: 14px;
-  padding: 12px 16px;
-  font-size: 1.05rem;
-  color: var(--motriz-text-main);
-  outline: none;
-}
-
-.motriz-input:focus {
-  border-color: var(--motriz-red-primary);
-  background: #FFFFFF;
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
 .input-hint {
   font-size: 0.76rem;
-  color: #B45309;
-  font-weight: 600;
+  color: var(--motriz-text-muted);
 }
 
-.difficulty-options {
+.hand-options {
   display: flex;
   gap: 10px;
 }
 
-.diff-pill {
+.hand-pill {
   flex: 1;
-  border: 2px solid #E2D5C4;
-  background: #FDFBF7;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  background: #FFFDF9;
+  border: 2px solid #D5C2B1;
   border-radius: 12px;
-  padding: 10px 8px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--motriz-text-muted);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
-.diff-pill.diff-active {
-  border-color: var(--motriz-red-primary);
-  background: var(--motriz-red-primary);
+.hand-pill-active {
+  background: #8C1D2C !important;
+  color: #FFF !important;
+  border-color: #8C1D2C !important;
+}
+
+.difficulty-options {
+  display: flex;
+  gap: 8px;
+}
+
+.diff-pill {
+  flex: 1;
+  padding: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  background: #FFFFFF;
+  border: 2px solid #E2D2C1;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.diff-active {
+  background: #8C1D2C;
   color: #FFFFFF;
+  border-color: #8C1D2C;
 }
 
 .avatar-selector {
   display: flex;
-  gap: 12px;
+  gap: 8px;
 }
 
 .avatar-opt-btn {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  border: 2px solid #E2D5C4;
+  width: 46px;
+  height: 46px;
+  font-size: 1.6rem;
   background: #FFFFFF;
-  font-size: 1.7rem;
+  border: 2px solid #E2D2C1;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
 }
 
 .avatar-opt-active {
   border-color: var(--motriz-red-primary);
-  transform: scale(1.15);
-  box-shadow: 0 4px 10px rgba(140, 29, 44, 0.25);
+  background: #FFF0F2;
+  transform: scale(1.08);
 }
 
+/* Actions adaptadas por mano dominante */
 .form-actions {
   display: flex;
   gap: 14px;
-  margin-top: 10px;
+  margin-top: 14px;
+  transition: all 0.3s ease;
+}
+
+.actions-align-left {
+  justify-content: flex-start;
+  flex-direction: row;
+}
+
+.actions-align-right {
+  justify-content: flex-end;
+  flex-direction: row-reverse;
 }
 
 .form-btn {
-  flex: 1;
-  padding: 14px 20px;
+  padding: 14px 28px;
+  font-size: 1.05rem;
+}
+
+/* Profiles Grid */
+.profiles-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.profile-item-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  background: #FFFFFF;
+  border: 2px solid #E2D2C1;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.18s;
+  position: relative;
+}
+
+.profile-item-card:hover {
+  border-color: var(--motriz-red-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(140, 29, 44, 0.12);
+}
+
+.profile-item-active {
+  border-color: var(--motriz-red-primary);
+  background: #FFF7F8;
+}
+
+.p-avatar {
+  font-size: 2.2rem;
+}
+
+.p-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.p-name {
   font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--motriz-text-main);
+}
+
+.p-meta {
+  font-size: 0.85rem;
+  color: var(--motriz-text-muted);
+}
+
+.p-hand-tag {
+  font-size: 0.85rem;
+  color: #8C1D2C;
+}
+
+.p-diff {
+  font-size: 0.78rem;
+  color: var(--motriz-text-muted);
+  text-transform: capitalize;
+}
+
+.p-badge-active {
+  margin-left: auto;
+  background: var(--motriz-red-primary);
+  color: #FFFFFF;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.profiles-list-actions {
+  display: flex;
+  margin-top: 20px;
+}
+
+.btn-add-p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 26px;
+  font-size: 1.05rem;
 }
 </style>

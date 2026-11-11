@@ -1,6 +1,6 @@
 <script setup>
 import { useProfiles } from '../../composables/useProfiles'
-import { playClickTone } from '../../composables/useAudio'
+import { playClickTone, playSelectTone } from '../../composables/useAudio'
 
 const props = defineProps({
   showBack: {
@@ -13,9 +13,9 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['back', 'open-settings', 'open-help', 'open-profiles'])
+const emit = defineEmits(['back', 'open-settings', 'open-help', 'open-profiles', 'open-abuelo-form'])
 
-const { activeProfile } = useProfiles()
+const { activeProfile, isLeftHanded, isRightHanded, dominantHand, toggleDominantHand } = useProfiles()
 
 function handleBack() {
   playClickTone()
@@ -36,16 +36,23 @@ function handleProfiles() {
   playClickTone()
   emit('open-profiles')
 }
+
+function handleToggleHand() {
+  playSelectTone()
+  toggleDominantHand()
+}
 </script>
 
 <template>
-  <header class="motriz-header">
+  <header
+    class="motriz-header"
+    :class="{ 'header-handed-left': isLeftHanded, 'header-handed-right': isRightHanded }"
+  >
+    <!-- Logo & Branding -->
     <div class="logo-area" @click="handleProfiles">
-      <!-- Asistencia Motriz Motriz Emblem Icon -->
       <div class="logo-emblem">
         <svg viewBox="0 0 100 100" class="emblem-svg">
           <circle cx="50" cy="50" r="46" fill="#8C1D2C" />
-          <!-- Stylized human body with outstretched arms -->
           <circle cx="50" cy="27" r="10" fill="#FFFDF9" />
           <path
             d="M 23 45 Q 50 35 77 45 Q 70 55 58 50 L 58 64 L 66 85 L 54 85 L 50 72 L 46 85 L 34 85 L 42 64 L 42 50 Q 30 55 23 45 Z"
@@ -59,16 +66,29 @@ function handleProfiles() {
         <span class="brand-subtitle">MOTRIZ</span>
       </div>
 
-      <div v-if="activeProfile" class="profile-pill-badge" title="Cambiar o editar perfil">
-        <span class="profile-avatar">{{ activeProfile.avatar }}</span>
+      <!-- Abuelo Pill Badge -->
+      <div v-if="activeProfile" class="profile-pill-badge" title="Ver o cambiar abuelo">
+        <span class="profile-avatar">{{ activeProfile.avatar || '👴' }}</span>
         <div class="profile-meta">
           <span class="profile-name">{{ activeProfile.name }}</span>
-          <span class="profile-height">{{ activeProfile.heightCm }} cm</span>
+          <span class="profile-height">{{ activeProfile.heightCm }} cm • {{ activeProfile.age }} años</span>
         </div>
       </div>
     </div>
 
+    <!-- Header Actions (Reposicionados según la mano dominante) -->
     <div class="header-actions">
+      <!-- Indicador / Alternador de Mano Dominante -->
+      <button
+        type="button"
+        class="btn-hand-toggle"
+        :title="'Mano dominante actual: ' + dominantHand + '. Clic para alternar.'"
+        @click="handleToggleHand"
+      >
+        <span class="hand-side-badge">{{ isLeftHanded ? '👈 Izquierda' : '👉 Derecha' }}</span>
+      </button>
+
+      <!-- Botón Volver -->
       <button
         v-if="showBack"
         type="button"
@@ -81,6 +101,7 @@ function handleProfiles() {
         <span>{{ backLabel }}</span>
       </button>
 
+      <!-- Botón Configuración -->
       <button
         type="button"
         class="btn-round-action"
@@ -94,6 +115,7 @@ function handleProfiles() {
         </svg>
       </button>
 
+      <!-- Botón Ayuda -->
       <button
         type="button"
         class="btn-round-action"
@@ -116,12 +138,22 @@ function handleProfiles() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 36px;
-  background: rgba(255, 253, 249, 0.88);
+  padding: 16px 36px;
+  background: rgba(255, 253, 249, 0.9);
   backdrop-filter: blur(14px);
   border-bottom: 2px solid var(--motriz-card-border);
   position: relative;
   z-index: 30;
+  transition: all 0.35s ease;
+}
+
+/* En modo zurdo: se invierte la cabecera para que los botones queden en la mano izquierda del abuelo */
+.header-handed-left {
+  flex-direction: row-reverse;
+}
+
+.header-handed-left .header-actions {
+  flex-direction: row;
 }
 
 .logo-area {
@@ -132,8 +164,8 @@ function handleProfiles() {
 }
 
 .logo-emblem {
-  width: 52px;
-  height: 52px;
+  width: 50px;
+  height: 50px;
   filter: drop-shadow(0 3px 6px rgba(140, 29, 44, 0.25));
   transition: transform 0.2s ease;
 }
@@ -171,7 +203,7 @@ function handleProfiles() {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: 20px;
+  margin-left: 18px;
   padding: 6px 16px;
   background: #FFF9F2;
   border: 1.5px solid #E5D5C4;
@@ -198,7 +230,7 @@ function handleProfiles() {
 
 .profile-name {
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--motriz-text-main);
 }
 
@@ -207,22 +239,76 @@ function handleProfiles() {
   color: var(--motriz-text-muted);
 }
 
+/* Header Actions */
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
+}
+
+.btn-hand-toggle {
+  display: flex;
+  align-items: center;
+  background: #FFF0F2;
+  border: 2px solid #F5C2C9;
+  border-radius: 9999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-hand-toggle:hover {
+  background: #8C1D2C;
+  border-color: #8C1D2C;
+}
+
+.btn-hand-toggle:hover .hand-side-badge {
+  color: #FFFFFF;
+}
+
+.hand-side-badge {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #8C1D2C;
+  transition: color 0.2s;
 }
 
 .header-back-btn {
-  padding: 10px 22px;
-  font-size: 1.05rem;
+  padding: 10px 18px;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-round-action {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #FFFDF9;
+  border: 2px solid #E8DDD0;
+  color: var(--motriz-text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(70, 30, 20, 0.08);
+  transition: all 0.18s;
+}
+
+.btn-round-action:hover {
+  background: #FFFFFF;
+  border-color: var(--motriz-red-primary);
+  color: var(--motriz-red-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(140, 29, 44, 0.2);
 }
 
 @media (max-width: 768px) {
   .motriz-header {
     padding: 12px 18px;
   }
-  .profile-pill-badge {
+  .brand-text, .profile-pill-badge {
     display: none;
   }
 }
