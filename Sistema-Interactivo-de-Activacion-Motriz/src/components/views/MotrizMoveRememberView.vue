@@ -7,8 +7,9 @@ import { useProfiles } from '../../composables/useProfiles'
 import { createPoseTracker, measurePose, recognizePose } from '../../game/moveRemember/poseRecognition'
 import { generateSequence, movements, ROUND_LENGTH, scoreRound } from '../../game/moveRemember/round'
 import MotrizMovementIcon from '../games/MotrizMovementIcon.vue'
+import MotrizCalibrationView from './MotrizCalibrationView.vue'
 
-defineEmits(['exit'])
+defineEmits(['exit', 'finish'])
 
 const MEMORY_TIME_MS = 12000
 const movementById = new Map(movements.map((movement) => [movement.id, movement]))
@@ -152,7 +153,18 @@ function finishRound() {
 </script>
 
 <template>
-  <section class="memory-view" :class="{ 'sidebar-left': isLeftHanded }" aria-labelledby="memory-title">
+  <!-- FASE 1: Calibración previa solo desde la cintura para arriba -->
+  <MotrizCalibrationView
+    v-if="phase === 'ready'"
+    mode="upper-body"
+    title="Mueve y Recuerda"
+    lead-text="Calibración de cintura para arriba • Prepara tus brazos y hombros"
+    button-text="COMENZAR JUEGO"
+    @start-play="startRound()"
+    @exit="$emit('exit')"
+  />
+
+  <section v-else class="memory-view" :class="{ 'sidebar-left': isLeftHanded }" aria-labelledby="memory-title">
     <div class="motriz-card memory-sidebar">
       <header class="memory-hud">
         <h1 id="memory-title">Mueve y Recuerda</h1>
@@ -169,30 +181,9 @@ function finishRound() {
         </div>
       </header>
 
-      <div v-if="phase === 'ready'" class="memory-panel">
-        <h2 ref="phaseHeading" tabindex="-1">Memoriza cuatro posturas</h2>
-        <p role="status">
-          {{ tracked ? 'Mantén el cursor sobre Comenzar.' : (cameraError || 'Colócate frente a la cámara con los brazos y la cintura a la vista.') }}
-        </p>
-        <div class="memory-actions">
-          <button
-            v-if="!stream?.active"
-            type="button"
-            class="btn-motriz-primary"
-            :disabled="isLoadingDetector"
-            @click="initCamera()"
-          >
-            {{ isLoadingDetector ? 'Iniciando cámara…' : 'Activar cámara' }}
-          </button>
-          <button v-else type="button" class="btn-motriz-primary" :disabled="!tracked" @click="startRound()">
-            Comenzar
-          </button>
-        </div>
-      </div>
-
-      <div v-else-if="paused" class="memory-panel">
+      <div v-if="paused" class="memory-panel">
         <h2 ref="phaseHeading" tabindex="-1">Pausa</h2>
-        <div class="memory-actions">
+        <div class="memory-actions-top">
           <button type="button" class="btn-motriz-primary" @click="togglePause">Continuar</button>
           <button type="button" class="btn-motriz-secondary" @click="finishRound">Terminar ronda</button>
         </div>
@@ -200,7 +191,13 @@ function finishRound() {
 
       <div v-else-if="phase === 'memorize'" class="memory-panel">
         <h2 ref="phaseHeading" tabindex="-1">Memoriza el orden</h2>
-        <p role="timer">Tiempo restante <strong>{{ secondsLeft }} s</strong></p>
+
+        <!-- BOTÓN ARRIBA PARA NO AGACHARSE -->
+        <div class="memory-actions-top">
+          <button type="button" class="btn-motriz-primary" @click="startExecution">¡Ya memoricé! Empezar</button>
+        </div>
+
+        <p role="timer">Tiempo restante: <strong>{{ secondsLeft }} s</strong></p>
         <ol class="sequence-grid">
           <li v-for="(id, index) in sequence" :key="id" class="pose-tile">
             <span class="step-number">{{ index + 1 }}</span>
@@ -208,13 +205,16 @@ function finishRound() {
             <strong>{{ movementById.get(id).label }}</strong>
           </li>
         </ol>
-        <div class="memory-actions">
-          <button type="button" class="btn-motriz-primary" @click="startExecution">Ya memoricé</button>
-        </div>
       </div>
 
       <div v-else-if="phase === 'execute'" class="memory-panel">
         <h2 ref="phaseHeading" tabindex="-1" aria-live="polite">Postura {{ completed + 1 }} de {{ ROUND_LENGTH }}</h2>
+
+        <!-- PISTA ARRIBA -->
+        <div v-if="!hint" class="memory-actions-top">
+          <button type="button" class="btn-motriz-secondary" @click="revealHint">Ver pista</button>
+        </div>
+
         <p role="status">
           <template v-if="!tracked">Seguimiento en pausa. Vuelve al centro de la cámara.</template>
           <template v-else-if="retry">Inténtalo de nuevo. Mantén la postura hasta que avance el contador.</template>
@@ -224,15 +224,27 @@ function finishRound() {
           <MotrizMovementIcon :arms="hint.arms" />
           <strong>{{ hint.label }}</strong>
         </div>
-        <div v-else class="memory-actions">
-          <button type="button" class="btn-motriz-secondary" @click="revealHint">Ver pista</button>
-        </div>
       </div>
 
       <div v-else class="memory-panel">
         <h2 ref="phaseHeading" tabindex="-1">
           {{ result.perfect ? '¡Secuencia completada!' : 'Resultados de la ronda' }}
         </h2>
+
+        <!-- ACCIONES PRINCIPALES ARRIBA DEL TEXTO -->
+        <div class="memory-actions-top">
+          <button type="button" class="btn-motriz-primary btn-session-finish" @click="$emit('finish')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            <span>FINALIZAR SESIÓN</span>
+          </button>
+          <div class="memory-actions-sub">
+            <button type="button" class="btn-motriz-secondary btn-sm" :disabled="!tracked" @click="startRound()">Nueva secuencia</button>
+            <button type="button" class="btn-motriz-secondary btn-sm" :disabled="!tracked" @click="startRound(true)">Repetir</button>
+          </div>
+        </div>
+
         <dl class="result-grid">
           <div><dt>Posturas completadas</dt><dd>{{ result.correct }} / {{ ROUND_LENGTH }}</dd></div>
           <div><dt>Errores de orden</dt><dd>{{ result.orderErrors }}</dd></div>
@@ -240,10 +252,6 @@ function finishRound() {
           <div><dt>Pistas utilizadas</dt><dd>{{ result.hintsUsed }}</dd></div>
         </dl>
         <p v-if="!tracked" role="status">Vuelve al centro de la cámara para jugar otra ronda.</p>
-        <div class="memory-actions">
-          <button type="button" class="btn-motriz-primary" :disabled="!tracked" @click="startRound()">Nueva secuencia</button>
-          <button type="button" class="btn-motriz-secondary" :disabled="!tracked" @click="startRound(true)">Repetir secuencia</button>
-        </div>
       </div>
     </div>
   </section>
@@ -293,12 +301,35 @@ function finishRound() {
 .memory-panel h2 {
   margin: 0;
   color: var(--motriz-red-primary);
-  font-size: clamp(1.75rem, 4vw, 2.625rem);
+  font-size: clamp(1.5rem, 3.5vw, 2.2rem);
 }
 
 .memory-panel p {
   margin: 4px 0 0;
-  font-size: clamp(1.125rem, 2.5vw, 1.3125rem);
+  font-size: clamp(1rem, 2.2vw, 1.2rem);
+}
+
+.memory-actions-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 10px;
+}
+
+.memory-actions-sub {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-session-finish {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 18px;
+  font-weight: 900;
+  border-radius: 9999px;
+  box-shadow: 0 6px 20px rgba(140, 29, 44, 0.35);
 }
 
 .memory-actions {
