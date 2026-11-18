@@ -3,10 +3,13 @@ import { ref } from 'vue'
 import { playClickTone, playSelectTone } from '../../composables/useAudio'
 import BalloonGame from '../BalloonGame.vue'
 import MotrizGameView from './MotrizGameView.vue'
+import MotrizMovementIcon from './MotrizMovementIcon.vue'
+import { movements } from '../../game/moveRemember/round'
 
-const emit = defineEmits(['back'])
+const emit = defineEmits(['back', 'open-move-remember'])
 
-const activeTab = ref('hub') // 'hub' | 'unach-cif' | 'alcanza-colores'
+const activeTab = ref('hub')
+const memoryIcon = movements.find(({ id }) => id === 'both-arms-up')
 
 function handleSelect(tab) {
   playSelectTone()
@@ -20,6 +23,11 @@ function handleBack() {
   } else {
     emit('back')
   }
+}
+
+function openMoveRemember() {
+  playSelectTone()
+  emit('open-move-remember')
 }
 </script>
 
@@ -95,6 +103,15 @@ function handleBack() {
           </p>
           <button type="button" class="btn-motriz-primary btn-launch">
             Abrir Prototipo
+          </button>
+        </div>
+
+        <div class="lab-card" @click="openMoveRemember">
+          <MotrizMovementIcon :arms="memoryIcon.arms" class="card-icon memory-icon" />
+          <h3>Mueve y Recuerda</h3>
+          <p>Memoriza la secuencia y reproduce los movimientos con tu cuerpo frente a la cámara.</p>
+          <button type="button" class="btn-motriz-primary btn-launch">
+            Abrir Mueve y Recuerda
           </button>
         </div>
       </div>
@@ -197,6 +214,12 @@ function handleBack() {
 .card-icon {
   font-size: 3rem;
   margin-bottom: 12px;
+}
+
+.memory-icon {
+  width: 54px;
+  height: 54px;
+  color: var(--motriz-red-primary);
 }
 
 .lab-card h3 {

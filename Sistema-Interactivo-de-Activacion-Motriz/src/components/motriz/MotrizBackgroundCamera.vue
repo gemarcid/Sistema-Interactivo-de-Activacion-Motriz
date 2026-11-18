@@ -4,6 +4,10 @@ import { useCamera } from '../../composables/useCamera'
 import { BODY_CONNECTIONS } from '../../effects/bodyConnections'
 import { getRainbowColor } from '../../effects/rainbow'
 
+defineProps({
+  showStartup: { type: Boolean, default: true },
+})
+
 const videoRef = ref(null)
 const canvasRef = ref(null)
 let animId = null
@@ -150,7 +154,7 @@ function drawBodySkeleton(ctx) {
     <div class="motriz-ambient-vignette"></div>
 
     <!-- Camera Startup Overlay if waiting for permission -->
-    <div v-if="!isCameraActive" class="camera-startup-overlay">
+    <div v-if="showStartup && !isCameraActive" class="camera-startup-overlay">
       <div class="startup-card">
         <div class="startup-icon">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8C1D2C" stroke-width="2">

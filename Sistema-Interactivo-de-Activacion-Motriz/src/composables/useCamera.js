@@ -15,6 +15,7 @@ const alignmentScore = ref(0) // 0 to 100%
 
 const bodyState = reactive({
   landmarks: null,
+  videoAspect: 0,
   points: [],
   segments: [],
   mapped: [],
@@ -126,6 +127,7 @@ export function useCamera() {
         return
       }
 
+      bodyState.videoAspect = video.videoHeight ? video.videoWidth / video.videoHeight : 0
       bodyState.landmarks = landmarks
       const interaction = buildBodyInteraction(landmarks, { width, height }, video)
       bodyState.points = interaction.points

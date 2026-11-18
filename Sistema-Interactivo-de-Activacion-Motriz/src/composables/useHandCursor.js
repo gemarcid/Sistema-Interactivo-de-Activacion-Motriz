@@ -17,6 +17,7 @@ export const handCursorState = reactive({
 
 let currentHoverElement = null
 let dwellTimer = 0
+let enabled = true
 const DWELL_DURATION = 0.32 // Reducido a la mitad para una activación ultra rápida y fluida
 
 export function useHandCursor() {
@@ -42,7 +43,7 @@ export function useHandCursor() {
   }
 
   function updateHandCursor(landmarks, videoWidth, videoHeight, dt = 0.016) {
-    if (!landmarks || landmarks.length === 0) {
+    if (!enabled || !landmarks || landmarks.length === 0) {
       deactivateCursor()
       return
     }
@@ -156,8 +157,14 @@ export function useHandCursor() {
     el.click()
   }
 
+  function setHandCursorEnabled(value) {
+    enabled = value
+    if (!enabled) deactivateCursor()
+  }
+
   return {
     handCursorState,
     updateHandCursor,
+    setHandCursorEnabled,
   }
 }
