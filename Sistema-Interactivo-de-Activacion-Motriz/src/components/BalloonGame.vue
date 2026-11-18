@@ -31,6 +31,7 @@ const rankingSaved = ref(false)
 let detector = null
 let stream = null
 let frameId = 0
+let stageObserver = null
 let lastVideoTime = -1
 let lastFrame = performance.now()
 let spawnAccumulator = 0
@@ -72,13 +73,15 @@ async function activateCamera() {
 
     await nextTick()
     const video = videoRef.value
+    if (!video) return
     video.srcObject = stream
     await video.play()
     cameraActive.value = true
     status.value = 'Cámara activa. Aléjate hasta que se vea tu cuerpo completo.'
 
     resizeCanvas()
-    window.addEventListener('resize', resizeCanvas)
+    stageObserver = new ResizeObserver(resizeCanvas)
+    stageObserver.observe(stageRef.value)
     lastFrame = performance.now()
     frameId = requestAnimationFrame(loop)
   } catch (e) {
@@ -387,7 +390,7 @@ function playTone(frequency, duration) {
 function shutdown() {
   cancelAnimationFrame(frameId)
   if (countdownTimer) window.clearInterval(countdownTimer)
-  window.removeEventListener('resize', resizeCanvas)
+  stageObserver?.disconnect()
   // No detenemos el hardware de la cámara para que el menú principal siga funcionando fluidamente
   detector?.close?.()
 }
@@ -396,7 +399,7 @@ onBeforeUnmount(shutdown)
 </script>
 
 <template>
-  <main class="app-shell">
+  <div class="app-shell">
     <header class="hero cif-hero">
       <div>
         <p class="eyebrow">UNIVERSIDAD ADVENTISTA DE CHILE · CASA ABIERTA</p>
@@ -445,46 +448,49 @@ onBeforeUnmount(shutdown)
         <div class="countdown-number">{{ countdown }}</div>
         <p>¡Prepárate!</p>
       </div>
-
-      <div v-if="gameOver" class="game-over">
-        <div class="game-over-card casa-card">
-          <p class="mini-title">INGENIERÍA CIVIL EN INFORMÁTICA</p>
-          <h2>¡Desafío completado!</h2>
-          <strong>{{ score }} puntos</strong>
-          <p>{{ resultMessage }}</p>
-          <p class="game-over-copy">{{ hits }} interacciones detectadas mediante visión computacional.</p>
-
-          <div class="name-row" v-if="!rankingSaved">
-            <input ref="nameRef" v-model="playerName" maxlength="18" placeholder="Nombre o nickname" @keyup.enter="saveScore" />
-            <button class="primary" @click="saveScore">Guardar</button>
-          </div>
-          <p v-else class="saved">✓ Puntaje guardado en el TOP 5 local</p>
-
-          <button class="success replay" @click="requestStart">Jugar otra vez</button>
-          <p class="learn-copy">Este juego usa <strong>visión computacional</strong> para detectar tu cuerpo en tiempo real.</p>
-        </div>
-      </div>
     </section>
+
+    <div v-if="gameOver" class="game-over">
+      <div class="game-over-card casa-card">
+        <p class="mini-title">INGENIERÍA CIVIL EN INFORMÁTICA</p>
+        <h2>¡Desafío completado!</h2>
+        <strong>{{ score }} puntos</strong>
+        <p>{{ resultMessage }}</p>
+        <p class="game-over-copy">{{ hits }} interacciones detectadas mediante visión computacional.</p>
+
+        <div class="name-row" v-if="!rankingSaved">
+          <input ref="nameRef" v-model="playerName" maxlength="18" placeholder="Nombre o nickname" @keyup.enter="saveScore" />
+          <button class="primary" @click="saveScore">Guardar</button>
+        </div>
+        <p v-else class="saved">✓ Puntaje guardado en el TOP 5 local</p>
+
+        <button class="success replay" @click="requestStart">Jugar otra vez</button>
+        <p class="learn-copy">Este juego usa <strong>visión computacional</strong> para detectar tu cuerpo en tiempo real.</p>
+      </div>
+    </div>
 
     <p class="status" :class="{ error }" role="status">{{ error || status }}</p>
 
-    <section class="bottom-grid">
-      <article class="info-card">
-        <p class="eyebrow">¿CÓMO FUNCIONA?</p>
-        <h3>Inteligencia Artificial + Programación</h3>
-        <p>MediaPipe identifica puntos de tu cuerpo y el juego calcula colisiones en tiempo real directamente desde el navegador.</p>
-        <strong>Ingeniería Civil en Informática · UNACH</strong>
-      </article>
+    <details v-if="!running && !countdown && !gameOver" class="cif-details">
+      <summary>Información y ranking</summary>
+      <div class="bottom-grid">
+        <article class="info-card">
+          <p class="eyebrow">¿CÓMO FUNCIONA?</p>
+          <h3>Inteligencia Artificial + Programación</h3>
+          <p>MediaPipe identifica puntos de tu cuerpo y el juego calcula colisiones en tiempo real directamente desde el navegador.</p>
+          <strong>Ingeniería Civil en Informática · UNACH</strong>
+        </article>
 
-      <article class="ranking-card">
-        <p class="eyebrow">TOP 5 · CASA ABIERTA</p>
-        <ol v-if="ranking.length">
-          <li v-for="(item, index) in ranking" :key="`${item.name}-${item.date}`">
-            <span>{{ index + 1 }}. {{ item.name }}</span><strong>{{ item.score }}</strong>
-          </li>
-        </ol>
-        <p v-else class="empty-ranking">Aún no hay puntajes. ¡Sé el primero!</p>
-      </article>
-    </section>
-  </main>
+        <article class="ranking-card">
+          <p class="eyebrow">TOP 5 · CASA ABIERTA</p>
+          <ol v-if="ranking.length">
+            <li v-for="(item, index) in ranking" :key="`${item.name}-${item.date}`">
+              <span>{{ index + 1 }}. {{ item.name }}</span><strong>{{ item.score }}</strong>
+            </li>
+          </ol>
+          <p v-else class="empty-ranking">Aún no hay puntajes. ¡Sé el primero!</p>
+        </article>
+      </div>
+    </details>
+  </div>
 </template>

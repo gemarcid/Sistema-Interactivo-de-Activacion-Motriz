@@ -442,4 +442,72 @@ function handleExit() {
     width: 100%;
   }
 }
+
+.prep-fit-screen {
+  display: flex;
+  flex: 1 0 auto;
+  height: auto;
+}
+
+.prep-fit-screen .prep-ui-layout {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  gap: 12px;
+}
+
+.prep-fit-screen .silhouette-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+@media (min-width: 651px) and (max-width: 900px) {
+  .prep-fit-screen .prep-ui-layout {
+    flex-direction: row !important;
+  }
+
+  .prep-fit-screen .prep-handed-left {
+    flex-direction: row-reverse !important;
+  }
+}
+
+@media (max-width: 650px) {
+  .prep-fit-screen .prep-ui-layout {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 900px), (max-height: 650px) {
+  .prep-fit-screen .prep-ui-layout,
+  .prep-fit-screen .advice-card {
+    padding: 8px 12px;
+  }
+
+  .prep-fit-screen .prep-center-info,
+  .prep-fit-screen .advice-list {
+    gap: 6px;
+  }
+
+  .prep-fit-screen .alignment-pill-badge,
+  .prep-fit-screen .rf7-calibration-tag {
+    padding: 6px 10px;
+  }
+
+  .prep-fit-screen .advice-lead,
+  .prep-fit-screen .advice-list {
+    margin-bottom: 8px;
+  }
+
+  .prep-fit-screen .btn-commence {
+    padding: 8px 12px;
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-height: 540px) {
+  .prep-fit-screen .advice-list,
+  .prep-fit-screen .rf7-calibration-tag {
+    display: none;
+  }
+}
 </style>

@@ -33,7 +33,7 @@ function openMoveRemember() {
 </script>
 
 <template>
-  <div class="lab-container">
+  <div class="lab-container" :class="{ 'lab-playing': activeTab === 'unach-cif' || activeTab === 'alcanza-colores' }">
     <!-- Sub-Game: UNACH CIF Test Game -->
     <div v-if="activeTab === 'unach-cif'" class="subgame-wrapper cif-theme">
       <div class="subgame-nav">
@@ -152,14 +152,21 @@ function openMoveRemember() {
 
 <style scoped>
 .lab-container {
-  min-height: calc(100vh - 88px);
+  flex: 1 0 auto;
   position: relative;
   z-index: 10;
   display: flex;
   flex-direction: column;
 }
 
+.lab-playing,
+.lab-playing .subgame-wrapper {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
 .lab-hub-content {
+  width: 100%;
   max-width: 1100px;
   margin: 0 auto;
   padding: 30px 24px 40px;
@@ -191,7 +198,7 @@ function openMoveRemember() {
 
 .lab-cards-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr));
   gap: 24px;
   width: 100%;
   margin-bottom: 36px;
@@ -301,12 +308,12 @@ function openMoveRemember() {
 
 /* Subgame */
 .subgame-wrapper {
-  flex-grow: 1;
   display: flex;
   flex-direction: column;
 }
 
 .subgame-nav {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -326,9 +333,19 @@ function openMoveRemember() {
   color: var(--motriz-red-primary);
 }
 
-@media (max-width: 900px) {
-  .lab-cards-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 600px), (max-height: 600px) {
+  .lab-playing .subgame-nav {
+    padding: 6px 10px;
+    gap: 8px;
+  }
+
+  .lab-playing .btn-nav-back,
+  .lab-playing .subgame-title {
+    font-size: 0.86rem;
+  }
+
+  .lab-playing .btn-nav-back {
+    padding: 6px 10px;
   }
 }
 </style>

@@ -55,9 +55,9 @@ function startCameraLoop() {
 
       if (video && canvas && video.readyState >= 2) {
         const ctx = canvas.getContext('2d')
-        if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
-          canvas.width = window.innerWidth
-          canvas.height = window.innerHeight
+        if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
+          canvas.width = video.clientWidth
+          canvas.height = video.clientHeight
         }
 
         const w = canvas.width
@@ -184,8 +184,6 @@ function drawBodySkeleton(ctx) {
 .fullscreen-camera-layer {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100vh;
   overflow: hidden;
   z-index: 0;
   background-color: #1a0e10;

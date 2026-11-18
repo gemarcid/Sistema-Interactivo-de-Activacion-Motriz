@@ -77,6 +77,7 @@ function handleOpenOriginalCIF() {
 
       <MotrizCalibrationView
         v-else-if="currentView === 'calibration'"
+        class="prep-fit-screen"
         @start-play="handleOpenLab"
         @exit="currentView = 'home'"
       />
@@ -126,20 +127,23 @@ function handleOpenOriginalCIF() {
 <style scoped>
 .app-root {
   position: relative;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s ease;
 }
 
 .motriz-main-stage {
-  flex-grow: 1;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
   position: relative;
   z-index: 10;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 </style>

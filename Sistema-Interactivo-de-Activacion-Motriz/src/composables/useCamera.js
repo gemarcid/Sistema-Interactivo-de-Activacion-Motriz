@@ -104,6 +104,7 @@ export function useCamera() {
   function processVideoFrame(video, width, height, timestamp) {
     if (!detector || !video || video.readyState < 2) return
 
+    const isCursorVideo = video === sharedVideoEl || !sharedVideoEl?.isConnected
     try {
       // Enforce strictly monotonic increasing timestamp for MediaPipe PoseLandmarker
       let ts = typeof timestamp === 'number' && !isNaN(timestamp) && timestamp > 0 ? timestamp : performance.now()
@@ -122,8 +123,10 @@ export function useCamera() {
         bodyState.landmarks = null
         bodyState.points = []
         bodyState.segments = []
-        const { updateHandCursor } = useHandCursor()
-        updateHandCursor(null)
+        if (isCursorVideo) {
+          const { updateHandCursor } = useHandCursor()
+          updateHandCursor(null)
+        }
         return
       }
 
@@ -137,8 +140,11 @@ export function useCamera() {
       bodyDetected.value = interaction.points.length >= 6
 
       // Update virtual hand cursor for motion control & dwell click
-      const { updateHandCursor } = useHandCursor()
-      updateHandCursor(landmarks, width, height, 0.016)
+      if (isCursorVideo) {
+        const { updateHandCursor } = useHandCursor()
+        const { left, top } = video.getBoundingClientRect()
+        updateHandCursor(interaction.mapped, left, top)
+      }
 
       // Key landmarks (MediaPipe Pose):
       // 0: nose, 11: left shoulder, 12: right shoulder, 23: left hip, 24: right hip, 27: left ankle, 28: right ankle

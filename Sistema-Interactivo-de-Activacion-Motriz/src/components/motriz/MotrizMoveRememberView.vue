@@ -38,13 +38,13 @@ const playing = computed(() => phase.value === 'memorize' || phase.value === 'ex
 const result = computed(() => scoreRound(sequence.value.length, completed.value, orderErrors.value, hintsUsed.value))
 
 onMounted(() => {
-  setHandCursorEnabled(false)
   phaseHeading.value?.focus()
   trackingTimer = setInterval(() => {
     if (performance.now() - lastPoseAt > 400 || !hasCameraFeed()) loseTracking()
   }, 100)
 })
-watch([phase, paused], () => phaseHeading.value?.focus(), { flush: 'post' })
+watch(() => playing.value && !paused.value, (active) => setHandCursorEnabled(!active), { flush: 'sync' })
+watch([phase, paused], () => phaseHeading.value?.focus({ preventScroll: true }), { flush: 'post' })
 watch(() => bodyState.landmarks, (landmarks) => {
   const pose = hasCameraFeed() && measurePose(landmarks, bodyState.videoAspect)
   if (!pose) return loseTracking()
@@ -152,187 +152,162 @@ function finishRound() {
 </script>
 
 <template>
-  <section class="memory-view" aria-labelledby="memory-title">
-    <header class="memory-hud">
-      <h1 id="memory-title">Mueve y Recuerda</h1>
-      <div class="memory-actions">
-        <button
-          v-if="playing && !paused"
-          type="button"
-          class="btn-motriz-secondary"
-          @click="togglePause"
-        >
-          Pausar
-        </button>
-        <button type="button" class="btn-motriz-secondary" @click="$emit('exit')">Salir</button>
-      </div>
-    </header>
+  <section class="memory-view" :class="{ 'sidebar-left': isLeftHanded }" aria-labelledby="memory-title">
+    <div class="motriz-card memory-sidebar">
+      <header class="memory-hud">
+        <h1 id="memory-title">Mueve y Recuerda</h1>
+        <div class="memory-actions">
+          <button
+            v-if="playing && !paused"
+            type="button"
+            class="btn-motriz-secondary"
+            @click="togglePause"
+          >
+            Pausar
+          </button>
+          <button type="button" class="btn-motriz-secondary" @click="$emit('exit')">Salir</button>
+        </div>
+      </header>
 
-    <div v-if="phase === 'ready'" class="motriz-card memory-panel">
-      <h2 ref="phaseHeading" tabindex="-1">Memoriza cuatro posturas</h2>
-      <p role="status">
-        {{ tracked ? 'Reprodúcelas en orden frente a la cámara.' : (cameraError || 'Colócate frente a la cámara con los brazos y la cintura a la vista.') }}
-      </p>
-      <div class="memory-actions">
-        <button
-          v-if="!stream?.active"
-          type="button"
-          class="btn-motriz-primary"
-          :disabled="isLoadingDetector"
-          @click="initCamera()"
-        >
-          {{ isLoadingDetector ? 'Iniciando cámara…' : 'Activar cámara' }}
-        </button>
-        <button v-else type="button" class="btn-motriz-primary" :disabled="!tracked" @click="startRound()">
-          Comenzar
-        </button>
+      <div v-if="phase === 'ready'" class="memory-panel">
+        <h2 ref="phaseHeading" tabindex="-1">Memoriza cuatro posturas</h2>
+        <p role="status">
+          {{ tracked ? 'Mantén el cursor sobre Comenzar.' : (cameraError || 'Colócate frente a la cámara con los brazos y la cintura a la vista.') }}
+        </p>
+        <div class="memory-actions">
+          <button
+            v-if="!stream?.active"
+            type="button"
+            class="btn-motriz-primary"
+            :disabled="isLoadingDetector"
+            @click="initCamera()"
+          >
+            {{ isLoadingDetector ? 'Iniciando cámara…' : 'Activar cámara' }}
+          </button>
+          <button v-else type="button" class="btn-motriz-primary" :disabled="!tracked" @click="startRound()">
+            Comenzar
+          </button>
+        </div>
+      </div>
+
+      <div v-else-if="paused" class="memory-panel">
+        <h2 ref="phaseHeading" tabindex="-1">Pausa</h2>
+        <div class="memory-actions">
+          <button type="button" class="btn-motriz-primary" @click="togglePause">Continuar</button>
+          <button type="button" class="btn-motriz-secondary" @click="finishRound">Terminar ronda</button>
+        </div>
+      </div>
+
+      <div v-else-if="phase === 'memorize'" class="memory-panel">
+        <h2 ref="phaseHeading" tabindex="-1">Memoriza el orden</h2>
+        <p role="timer">Tiempo restante <strong>{{ secondsLeft }} s</strong></p>
+        <ol class="sequence-grid">
+          <li v-for="(id, index) in sequence" :key="id" class="pose-tile">
+            <span class="step-number">{{ index + 1 }}</span>
+            <MotrizMovementIcon :arms="movementById.get(id).arms" />
+            <strong>{{ movementById.get(id).label }}</strong>
+          </li>
+        </ol>
+        <div class="memory-actions">
+          <button type="button" class="btn-motriz-primary" @click="startExecution">Ya memoricé</button>
+        </div>
+      </div>
+
+      <div v-else-if="phase === 'execute'" class="memory-panel">
+        <h2 ref="phaseHeading" tabindex="-1" aria-live="polite">Postura {{ completed + 1 }} de {{ ROUND_LENGTH }}</h2>
+        <p role="status">
+          <template v-if="!tracked">Seguimiento en pausa. Vuelve al centro de la cámara.</template>
+          <template v-else-if="retry">Inténtalo de nuevo. Mantén la postura hasta que avance el contador.</template>
+          <template v-else>Mantén la postura hasta que avance el contador.</template>
+        </p>
+        <div v-if="hint" class="hint" role="status">
+          <MotrizMovementIcon :arms="hint.arms" />
+          <strong>{{ hint.label }}</strong>
+        </div>
+        <div v-else class="memory-actions">
+          <button type="button" class="btn-motriz-secondary" @click="revealHint">Ver pista</button>
+        </div>
+      </div>
+
+      <div v-else class="memory-panel">
+        <h2 ref="phaseHeading" tabindex="-1">
+          {{ result.perfect ? '¡Secuencia completada!' : 'Resultados de la ronda' }}
+        </h2>
+        <dl class="result-grid">
+          <div><dt>Posturas completadas</dt><dd>{{ result.correct }} / {{ ROUND_LENGTH }}</dd></div>
+          <div><dt>Errores de orden</dt><dd>{{ result.orderErrors }}</dd></div>
+          <div><dt>Posturas pendientes</dt><dd>{{ result.incomplete }}</dd></div>
+          <div><dt>Pistas utilizadas</dt><dd>{{ result.hintsUsed }}</dd></div>
+        </dl>
+        <p v-if="!tracked" role="status">Vuelve al centro de la cámara para jugar otra ronda.</p>
+        <div class="memory-actions">
+          <button type="button" class="btn-motriz-primary" :disabled="!tracked" @click="startRound()">Nueva secuencia</button>
+          <button type="button" class="btn-motriz-secondary" :disabled="!tracked" @click="startRound(true)">Repetir secuencia</button>
+        </div>
       </div>
     </div>
-
-    <div v-else-if="paused" class="motriz-card memory-panel">
-      <h2 ref="phaseHeading" tabindex="-1">Pausa</h2>
-      <div class="memory-actions">
-        <button type="button" class="btn-motriz-primary" @click="togglePause">Continuar</button>
-        <button type="button" class="btn-motriz-secondary" @click="finishRound">Terminar ronda</button>
-      </div>
-    </div>
-
-    <div v-else-if="phase === 'memorize'" class="motriz-card memory-panel">
-      <h2 ref="phaseHeading" tabindex="-1">Memoriza el orden</h2>
-      <p role="timer">Tiempo restante <strong>{{ secondsLeft }} s</strong></p>
-      <ol class="sequence-grid">
-        <li v-for="(id, index) in sequence" :key="id" class="pose-tile">
-          <span class="step-number">{{ index + 1 }}</span>
-          <MotrizMovementIcon :arms="movementById.get(id).arms" />
-          <strong>{{ movementById.get(id).label }}</strong>
-        </li>
-      </ol>
-      <div class="memory-actions">
-        <button type="button" class="btn-motriz-primary" @click="startExecution">Ya memoricé</button>
-      </div>
-    </div>
-
-    <div v-else-if="phase === 'execute'" class="motriz-card memory-panel">
-      <h2 ref="phaseHeading" tabindex="-1" aria-live="polite">Postura {{ completed + 1 }} de {{ ROUND_LENGTH }}</h2>
-      <p role="status">
-        <template v-if="!tracked">Seguimiento en pausa. Vuelve al centro de la cámara.</template>
-        <template v-else-if="retry">Inténtalo de nuevo. Mantén la postura hasta que avance el contador.</template>
-        <template v-else>Mantén la postura hasta que avance el contador.</template>
-      </p>
-      <div v-if="hint" class="hint" role="status">
-        <MotrizMovementIcon :arms="hint.arms" />
-        <strong>{{ hint.label }}</strong>
-      </div>
-      <div v-else class="memory-actions">
-        <button type="button" class="btn-motriz-secondary" @click="revealHint">Ver pista</button>
-      </div>
-    </div>
-
-    <aside
-      v-else
-      class="motriz-card memory-panel memory-results"
-      :class="{ 'results-left': isLeftHanded }"
-      aria-labelledby="memory-results-title"
-    >
-      <h2 id="memory-results-title" ref="phaseHeading" tabindex="-1">
-        {{ result.perfect ? '¡Secuencia completada!' : 'Resultados de la ronda' }}
-      </h2>
-      <dl class="result-grid">
-        <div><dt>Posturas completadas</dt><dd>{{ result.correct }} / {{ ROUND_LENGTH }}</dd></div>
-        <div><dt>Errores de orden</dt><dd>{{ result.orderErrors }}</dd></div>
-        <div><dt>Posturas pendientes</dt><dd>{{ result.incomplete }}</dd></div>
-        <div><dt>Pistas utilizadas</dt><dd>{{ result.hintsUsed }}</dd></div>
-      </dl>
-      <p v-if="!tracked" role="status">Vuelve al centro de la cámara para jugar otra ronda.</p>
-      <div class="memory-actions">
-        <button type="button" class="btn-motriz-primary" :disabled="!tracked" @click="startRound()">Nueva secuencia</button>
-        <button type="button" class="btn-motriz-secondary" :disabled="!tracked" @click="startRound(true)">Repetir secuencia</button>
-      </div>
-    </aside>
   </section>
 </template>
 
 <style scoped>
 .memory-view {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
   flex: 1;
-  gap: 16px;
+  min-height: 0;
+  justify-content: flex-end;
   padding: clamp(8px, 2vw, 24px);
-  text-align: center;
+}
+
+.memory-view.sidebar-left {
+  justify-content: flex-start;
+}
+
+.memory-sidebar {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, clamp(248px, 30vw, 352px));
+  padding: clamp(12px, 2vw, 20px);
 }
 
 .memory-hud {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
+  display: grid;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--motriz-card-border);
 }
 
 .memory-hud h1 {
   margin: 0;
-  padding: 8px 16px;
-  border-radius: 24px;
-  background: var(--motriz-bg-card);
   color: var(--motriz-red-primary);
-  box-shadow: var(--motriz-shadow-sm);
-  font-size: clamp(1.15rem, 3vw, 1.8rem);
+  font-size: clamp(1.25rem, 3vw, 1.8rem);
 }
 
 .memory-panel {
-  box-sizing: border-box;
-  width: min(100%, 780px);
-  padding: clamp(12px, 2vw, 20px);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding-top: 16px;
 }
 
 .memory-panel h2 {
   margin: 0;
   color: var(--motriz-red-primary);
-  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-size: clamp(1.75rem, 4vw, 2.625rem);
 }
 
 .memory-panel p {
   margin: 4px 0 0;
-  font-size: clamp(1rem, 2vw, 1.16rem);
-}
-
-.memory-results {
-  display: flex;
-  flex: 1 0 auto;
-  flex-direction: column;
-  align-self: flex-end;
-  width: min(100%, clamp(248px, 30vw, 352px));
-  text-align: left;
-}
-
-.memory-results.results-left {
-  align-self: flex-start;
-}
-
-.memory-results h2 {
-  font-size: clamp(1.75rem, 4vw, 2.625rem);
-}
-
-.memory-results p {
   font-size: clamp(1.125rem, 2.5vw, 1.3125rem);
 }
 
 .memory-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 8px;
 }
 
 .memory-panel .memory-actions {
-  margin-top: 12px;
-}
-
-.memory-results .memory-actions {
   flex-direction: column;
   flex-wrap: nowrap;
   margin-top: auto;
@@ -345,7 +320,7 @@ function finishRound() {
   font-size: clamp(0.98rem, 2vw, 1.12rem);
 }
 
-.memory-results .memory-actions button {
+.memory-panel .memory-actions button {
   min-height: 52px;
   font-size: clamp(1.125rem, 2.5vw, 1.375rem);
 }
@@ -363,7 +338,7 @@ function finishRound() {
 
 .sequence-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin: 10px 0 0;
   padding: 0;
@@ -380,12 +355,13 @@ function finishRound() {
   border-radius: 12px;
   background: var(--motriz-bg-warm);
   overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .pose-tile svg,
 .hint svg {
   width: clamp(42px, 8vw, 68px);
-  height: clamp(46px, 10vh, 76px);
+  height: clamp(38px, 7vh, 62px);
   color: var(--motriz-red-primary);
 }
 
@@ -440,9 +416,130 @@ function finishRound() {
   white-space: nowrap;
 }
 
-@media (max-width: 520px) {
+@media (max-height: 600px) {
+  .memory-view {
+    padding: 6px;
+  }
+
+  .memory-sidebar {
+    padding: 8px;
+  }
+
+  .memory-hud {
+    gap: 4px;
+    padding-bottom: 6px;
+  }
+
+  .memory-hud h1 {
+    font-size: 1.2rem;
+  }
+
+  .memory-panel {
+    padding-top: 6px;
+  }
+
+  .memory-panel h2 {
+    font-size: 1.5rem;
+  }
+
+  .memory-panel p,
+  .result-grid dt {
+    font-size: 1rem;
+  }
+
+  .memory-panel .memory-actions {
+    padding-top: 6px;
+  }
+
+  .memory-panel .memory-actions button {
+    min-height: 44px;
+    padding: 4px 8px;
+    font-size: 1rem;
+  }
+
+  .sequence-grid,
+  .result-grid {
+    gap: 4px;
+    margin: 6px 0 0;
+  }
+
+  .pose-tile,
+  .result-grid > div {
+    gap: 4px;
+    padding: 3px 6px;
+  }
+
+  .pose-tile svg,
+  .hint svg {
+    width: 34px;
+    height: 36px;
+  }
+
+  .step-number {
+    width: 20px;
+    height: 20px;
+  }
+
+  .result-grid dd {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-height: 700px), (max-width: 700px) {
   .sequence-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+  }
+
+  .pose-tile {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .pose-tile svg {
+    width: 32px;
+    height: 34px;
+  }
+}
+
+@media (max-height: 440px) {
+  .pose-tile svg {
+    width: 24px;
+    height: 26px;
+  }
+
+  .memory-panel .memory-actions {
+    flex-direction: row;
+  }
+
+  .memory-panel .memory-actions button {
+    flex: 1;
+  }
+}
+
+@media (min-width: 550px) and (max-height: 440px) {
+  .memory-sidebar {
+    width: clamp(310px, 44vw, 380px);
+  }
+
+  .memory-hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .memory-hud h1 {
+    font-size: 1rem;
+  }
+
+  .memory-hud .memory-actions {
+    flex: none;
+    gap: 4px;
+  }
+
+  .memory-hud button {
+    padding-inline: 8px;
   }
 }
 </style>
