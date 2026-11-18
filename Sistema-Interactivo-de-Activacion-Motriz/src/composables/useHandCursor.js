@@ -43,7 +43,7 @@ export function useHandCursor() {
   }
 
   function updateHandCursor(landmarks, videoWidth, videoHeight, dt = 0.016) {
-    // Si est√° desactivado expl√≠citamente, forzamos estado inactivo y cortamos la ejecuci√≥n
+    // Si est· desactivado explÌcitamente, forzamos estado inactivo y cortamos la ejecuciÛn
     if (handCursorState.disabled) {
       handCursorState.active = false
       handCursorState.isHovering = false
@@ -56,7 +56,6 @@ export function useHandCursor() {
       deactivateCursor()
       return
     }
-
     // MediaPipe Pose Landmarks:
     // 15: left_wrist, 16: right_wrist, 19: left_index, 20: right_index
     // Seguir ESTRICTAMENTE √∫nicamente la mano dominante configurada (sin cambiar a la otra mano)

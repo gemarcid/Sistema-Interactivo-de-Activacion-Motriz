@@ -10,7 +10,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // Resuelve siempre a <app-root>/data sin importar desde qué carpeta se ejecute Node/Vite
-const dataDir = path.resolve(__dirname, '../../../data');
+const dataDir = path.resolve(__dirname, '../../data');
 
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });

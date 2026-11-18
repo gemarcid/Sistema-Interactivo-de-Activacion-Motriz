@@ -2,15 +2,15 @@ import db from '../connection.js';
 
 export default {
     /**
-     * Guarda el perfil del abuelo usando los atributos de init.sql:
-     * - usuario: nombre, rol ('ABUELO' / 'PACIENTE'), activo (1)
+     * Guarda el perfil del paciente usando los atributos de init.sql:
+     * - usuario: nombre, rol ('PACIENTE'), activo (1)
      * - perfil: id_usuario, estatura_cm, edad, mano_dominante ('IZQUIERDA' / 'DERECHA'), dificultad, avatar
      * Sin usuario, contraseña ni correo electrónico.
      */
     crearPerfil: (event, perfil) => {
         return new Promise((resolve, reject) => {
             const manoDominante = (perfil.mano_dominante || 'DERECHA').toUpperCase() === 'IZQUIERDA' ? 'IZQUIERDA' : 'DERECHA';
-            const nombre = (perfil.nombre || 'Abuelo').trim();
+            const nombre = (perfil.nombre || 'Paciente').trim();
             const estaturaCm = Number(perfil.estatura_cm) || 160;
             const edad = Number(perfil.edad) || 70;
             const dificultad = perfil.dificultad || 'facil';
@@ -37,7 +37,7 @@ export default {
                 });
             } else {
                 // Creamos el registro en la tabla usuario primero (sin contraseñas ni correos)
-                const sqlUsuario = `INSERT INTO usuario (nombre, rol, activo) VALUES (?, 'ABUELO', 1)`;
+                const sqlUsuario = `INSERT INTO usuario (nombre, rol, activo) VALUES (?, 'PACIENTE', 1)`;
                 db.run(sqlUsuario, [nombre], function(userErr) {
                     if (userErr) return reject(userErr.message);
                     const newUserId = this.lastID;

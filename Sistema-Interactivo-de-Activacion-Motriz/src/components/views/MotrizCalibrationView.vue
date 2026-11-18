@@ -185,7 +185,7 @@ function handleExit() {
           <strong>Calibración Personalizada (RF7):</strong>
           <span>
             Estatura: {{ activeProfile.heightCm }} cm • Mano dominante:
-            {{ isLeftHanded ? 'Izquierda 👈 (Botones a la izquierda)' : 'Derecha 👉 (Botones a la derecha)' }}
+            {{ isLeftHanded ? 'Izquierda (Botones a la izquierda)' : 'Derecha (Botones a la derecha)' }}
           </span>
         </div>
       </div>
@@ -200,12 +200,19 @@ function handleExit() {
             </button>
           </div>
           <p class="advice-lead">
-            Colócate en el centro • Botón accesible para mano {{ isLeftHanded ? 'izquierda 👈' : 'derecha 👉' }}
+            Colócate en el centro • Botón accesible para mano {{ isLeftHanded ? 'izquierda' : 'derecha' }}
           </p>
 
           <div class="advice-list">
             <div class="advice-row">
-              <div class="advice-bubble">📐</div>
+              <div class="advice-bubble">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.3 8.7 8.7 21.3a1 1 0 0 1-1.4 0l-6-6a1 1 0 0 1 0-1.4L13.9 1.3a1 1 0 0 1 1.4 0l6 6a1 1 0 0 1 0 1.4z"/>
+                  <path d="m14.5 7.5 2 2"/>
+                  <path d="m11.5 10.5 2 2"/>
+                  <path d="m8.5 13.5 2 2"/>
+                </svg>
+              </div>
               <div>
                 <strong>Espacio suficiente</strong>
                 <p>1.5 a 2 metros libres frente a la pantalla.</p>
@@ -213,7 +220,14 @@ function handleExit() {
             </div>
 
             <div class="advice-row">
-              <div class="advice-bubble">💡</div>
+              <div class="advice-bubble">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 18h6"/>
+                  <path d="M10 22h4"/>
+                  <path d="M12 2v1"/>
+                  <path d="M12 7a5 5 0 0 0-5 5c0 2 1.5 3.5 2 5h6c.5-1.5 2-3 2-5a5 5 0 0 0-5-5z"/>
+                </svg>
+              </div>
               <div>
                 <strong>Iluminación adecuada</strong>
                 <p>Luz frontal sin reflejos directos en la lente.</p>
@@ -221,7 +235,14 @@ function handleExit() {
             </div>
 
             <div class="advice-row">
-              <div class="advice-bubble">🧍</div>
+              <div class="advice-bubble">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="5" r="3"/>
+                  <path d="M12 8v8"/>
+                  <path d="m9 21 3-5 3 5"/>
+                  <path d="M6 12h12"/>
+                </svg>
+              </div>
               <div>
                 <strong>Postura relajada</strong>
                 <p>Mantén los brazos sueltos y mira a la cámara.</p>

@@ -2,10 +2,10 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 require('dotenv').config();
 
-const { initDatabase } = require('./database/init');
-const authController = require('./database/controllers/authController');
-const patientController = require('./database/controllers/patientController');
-const metricsController = require('./database/controllers/metricsController');
+const { initDatabase } = require('../database/init');
+const authController = require('../database/controllers/authController');
+const patientController = require('../database/controllers/patientController');
+const metricsController = require('../database/controllers/metricsController');
 
 function createWindow() {
     const mainWindow = new BrowserWindow({
