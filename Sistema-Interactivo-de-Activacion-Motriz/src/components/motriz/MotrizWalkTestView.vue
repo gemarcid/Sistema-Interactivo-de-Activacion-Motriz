@@ -15,7 +15,7 @@ const TEST_DURATION = 30
 const timeLeft = ref(TEST_DURATION)
 let timerInterval = null
 
-// Canvas transparente para dibujar el esqueleto completo, ángulos y Centro de Masa
+// Canvas transparente para dibujar el esqueleto completo, torso, ángulos y Centro de Masa
 const overlayCanvasRef = ref(null)
 
 // Línea base guardada al terminar la calibración
@@ -30,7 +30,8 @@ const baseline = reactive({
   rightShoulder: 15,
   leftElbow: 170,
   rightElbow: 170,
-  // Centro de masa
+  // Torso y Centro de masa
+  torsoLength: 0.28,
   comX: 0.5,
   comY: 0.5,
 })
@@ -48,6 +49,12 @@ const metrics = reactive({
   rightShoulderAngle: 15,
   leftElbowAngle: 175,
   rightElbowAngle: 175,
+
+  // Torso y postura (encogimiento + verticalidad)
+  torsoHeightPct: 100,      // 100% = misma altura calibrada; <92% = encogimiento por fatiga
+  minTorsoHeightPct: 100,   // Mínimo alcanzado en la prueba
+  trunkTiltAngle: 0,        // Desviación lateral en grados respecto a la vertical (0° = recto)
+  maxTrunkTiltAngle: 0,     // Máxima inclinación lateral registrada
 
   // Amplitud de movimiento tren inferior (ROM)
   maxLeftKneeROM: 0,
@@ -94,6 +101,16 @@ const intensityLevel = computed(() => {
   return { label: 'Alta (Rápida)', color: '#f59e0b' }
 })
 
+// Estado postural del torso en vivo
+const torsoStatus = computed(() => {
+  const shrunk = metrics.torsoHeightPct < 90
+  const tilted = metrics.trunkTiltAngle > 10
+  if (shrunk && tilted) return { label: 'Encogido e inclinado', color: '#ef4444', alert: true }
+  if (shrunk) return { label: 'Encogimiento (Fatiga)', color: '#f59e0b', alert: true }
+  if (tilted) return { label: 'Inclinado lateralmente', color: '#f59e0b', alert: true }
+  return { label: 'Recto (Postura óptima)', color: '#22c55e', alert: false }
+})
+
 // Calcula el ángulo interno (0° a 180°) entre 3 puntos de MediaPipe (p2 es la articulación)
 function calculateJointAngle(p1, p2, p3, aspect = 16 / 9) {
   const ax = p1.x * aspect
@@ -118,7 +135,6 @@ function handleStartAfterCalibration() {
   const lm = bodyState.landmarks
   const aspect = window.innerWidth / window.innerHeight || 16 / 9
 
-  // Guardar ángulos iniciales en reposo (tren inferior y superior) como referencia
   if (lm && lm.length >= 29) {
     // Tren inferior
     if (areVisible(lm[23], lm[25], lm[27])) {
@@ -147,6 +163,16 @@ function handleStartAfterCalibration() {
     if (areVisible(lm[12], lm[14], lm[16])) {
       baseline.rightElbow = calculateJointAngle(lm[12], lm[14], lm[16], aspect)
     }
+
+    // Longitud vertical calibrada del torso (punto medio hombros -> punto medio caderas)
+    if (areVisible(lm[11], lm[12], lm[23], lm[24])) {
+      const shoulderMidY = (lm[11].y + lm[12].y) / 2
+      const hipMidY = (lm[23].y + lm[24].y) / 2
+      const initialTorso = hipMidY - shoulderMidY
+      if (initialTorso > 0.05) {
+        baseline.torsoLength = initialTorso
+      }
+    }
   }
 
   // Guardar Centro de Masa inicial calibrado
@@ -154,6 +180,11 @@ function handleStartAfterCalibration() {
   baseline.comY = bodyState.centerPoint?.y ?? 0.5
 
   // Resetear contadores
+  metrics.torsoHeightPct = 100
+  metrics.minTorsoHeightPct = 100
+  metrics.trunkTiltAngle = 0
+  metrics.maxTrunkTiltAngle = 0
+
   metrics.maxLeftKneeROM = 0
   metrics.maxRightKneeROM = 0
   metrics.maxHipROM = 0
@@ -215,13 +246,37 @@ watch(
     const lAnkle = lm[27]
     const rAnkle = lm[28]
 
-    // --- A. TREN INFERIOR: Rodillas, Caderas y Pasos ---
+    // --- A. TORSO: Encogimiento (altura vertical) e Inclinación (rectitud) ---
+    if (areVisible(lShoulder, rShoulder, lHip, rHip)) {
+      const sMidX = (lShoulder.x + rShoulder.x) / 2
+      const sMidY = (lShoulder.y + rShoulder.y) / 2
+      const hMidX = (lHip.x + rHip.x) / 2
+      const hMidY = (lHip.y + rHip.y) / 2
+
+      // 1. Porcentaje de altura del torso respecto a la calibración inicial
+      const currentTorsoHeight = Math.max(0.01, hMidY - sMidY)
+      const pct = Math.min(115, Math.round((currentTorsoHeight / baseline.torsoLength) * 100))
+      metrics.torsoHeightPct = pct
+      if (pct < metrics.minTorsoHeightPct) {
+        metrics.minTorsoHeightPct = pct
+      }
+
+      // 2. Ángulo de inclinación lateral respecto al eje vertical (0° = completamente recto)
+      const dx = Math.abs(sMidX - hMidX) * aspect
+      const dy = Math.max(0.01, hMidY - sMidY)
+      const tiltDeg = Math.round((Math.atan2(dx, dy) * 180.0) / Math.PI)
+      metrics.trunkTiltAngle = tiltDeg
+      if (tiltDeg > metrics.maxTrunkTiltAngle) {
+        metrics.maxTrunkTiltAngle = tiltDeg
+      }
+    }
+
+    // --- B. TREN INFERIOR: Rodillas, Caderas y Pasos ---
     if (areVisible(lHip, lKnee, lAnkle)) {
       metrics.leftKneeAngle = calculateJointAngle(lHip, lKnee, lAnkle, aspect)
       const romLeft = Math.max(0, baseline.leftKnee - metrics.leftKneeAngle)
       if (romLeft > metrics.maxLeftKneeROM) metrics.maxLeftKneeROM = romLeft
 
-      // Detección de paso pierna izquierda
       if (romLeft > 22 && !metrics.leftLegUp) {
         metrics.leftLegUp = true
         metrics.steps++
@@ -235,7 +290,6 @@ watch(
       const romRight = Math.max(0, baseline.rightKnee - metrics.rightKneeAngle)
       if (romRight > metrics.maxRightKneeROM) metrics.maxRightKneeROM = romRight
 
-      // Detección de paso pierna derecha
       if (romRight > 22 && !metrics.rightLegUp) {
         metrics.rightLegUp = true
         metrics.steps++
@@ -256,7 +310,7 @@ watch(
       if (hipRomR > metrics.maxHipROM) metrics.maxHipROM = hipRomR
     }
 
-    // --- B. TREN SUPERIOR: Hombros (Braceo) y Codos ---
+    // --- C. TREN SUPERIOR: Hombros (Braceo) y Codos ---
     if (areVisible(lHip, lShoulder, lElbow)) {
       metrics.leftShoulderAngle = calculateJointAngle(lHip, lShoulder, lElbow, aspect)
       const shoulderRomL = Math.abs(metrics.leftShoulderAngle - baseline.leftShoulder)
@@ -281,7 +335,7 @@ watch(
       if (elbowRomR > metrics.maxRightElbowROM) metrics.maxRightElbowROM = elbowRomR
     }
 
-    // --- C. CENTRO DE MASA / GRAVEDAD ---
+    // --- D. CENTRO DE MASA / GRAVEDAD ---
     if (bodyState.centerPoint) {
       metrics.comX = Math.round(bodyState.centerPoint.x * 100)
       metrics.comY = Math.round(bodyState.centerPoint.y * 100)
@@ -292,7 +346,7 @@ watch(
       if (swayY > metrics.comMaxSwayY) metrics.comMaxSwayY = swayY
     }
 
-    // --- D. DIBUJAR ESQUELETO COMPLETO, ÁNGULOS Y CoM ---
+    // --- E. DIBUJAR ESQUELETO COMPLETO, EJE DEL TORSO, ÁNGULOS Y CoM ---
     drawBiomechanicalOverlay(lm)
   }
 )
@@ -311,7 +365,6 @@ function drawBiomechanicalOverlay(lm) {
   const h = canvas.height
   ctx.clearRect(0, 0, w, h)
 
-  // Convertimos X normalizado a pantalla espejada (1 - x)
   const toScreen = (pt) => ({ x: (1 - pt.x) * w, y: pt.y * h })
 
   const lowerPairs = [
@@ -361,7 +414,38 @@ function drawBiomechanicalOverlay(lm) {
     }
   }
 
-  // 3. Nodos articulares y etiquetas de grados (side: 'left' va a la derecha en pantalla espejo)
+  // 3. Eje central del Torso (Columna: punto medio caderas -> punto medio hombros)
+  if (areVisible(lm[11], lm[12], lm[23], lm[24])) {
+    const sMid = toScreen({
+      x: (lm[11].x + lm[12].x) / 2,
+      y: (lm[11].y + lm[12].y) / 2,
+    })
+    const hMid = toScreen({
+      x: (lm[23].x + lm[24].x) / 2,
+      y: (lm[23].y + lm[24].y) / 2,
+    })
+
+    ctx.save()
+    ctx.strokeStyle = torsoStatus.value.color
+    ctx.lineWidth = 6
+    ctx.setLineDash([10, 6])
+    ctx.beginPath()
+    ctx.moveTo(hMid.x, hMid.y)
+    ctx.lineTo(sMid.x, sMid.y)
+    ctx.stroke()
+    ctx.restore()
+
+    // Etiqueta de altura de torso e inclinación en el centro del pecho
+    const midTrunkX = (sMid.x + hMid.x) / 2
+    const midTrunkY = (sMid.y + hMid.y) / 2
+    ctx.font = 'bold 13px sans-serif'
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)'
+    ctx.fillRect(midTrunkX - 54, midTrunkY - 26, 108, 22)
+    ctx.fillStyle = torsoStatus.value.color
+    ctx.fillText(`Torso ${metrics.torsoHeightPct}% • ${metrics.trunkTiltAngle}°`, midTrunkX - 48, midTrunkY - 11)
+  }
+
+  // 4. Nodos articulares y etiquetas de grados
   const joints = [
     // Tren superior
     { idx: 11, label: `${metrics.leftShoulderAngle}°`, color: '#38bdf8', side: 'left' },
@@ -395,7 +479,7 @@ function drawBiomechanicalOverlay(lm) {
     }
   }
 
-  // 4. Punto de Centro de Masa (CoM)
+  // 5. Punto de Centro de Masa (CoM)
   if (bodyState.centerPoint) {
     const comScreen = toScreen(bodyState.centerPoint)
     ctx.strokeStyle = '#f59e0b'
@@ -407,7 +491,7 @@ function drawBiomechanicalOverlay(lm) {
     ctx.stroke()
 
     ctx.fillStyle = '#fef3c7'
-    ctx.fillText('CoM', comScreen.x - 16, comScreen.y - 16)
+    ctx.fillText('CoM', comScreen.x - 16, comScreen.y + 24)
   }
 }
 
@@ -426,7 +510,7 @@ onBeforeUnmount(() => {
 
   <!-- FASE 2 y 3: Medición en vivo sobre la cámara global y resumen final -->
   <div v-else class="walk-hud-layer">
-    <!-- Canvas transparente con el esqueleto completo, ángulos y CoM -->
+    <!-- Canvas transparente con el esqueleto completo, eje del torso, ángulos y CoM -->
     <canvas v-if="phase === 'running'" ref="overlayCanvasRef" class="skeleton-canvas"></canvas>
 
     <!-- Barra superior compacta -->
@@ -444,41 +528,50 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <!-- Tarjetas de métricas en vivo (Tren Inferior + Tren Superior) -->
-    <div v-if="phase === 'running'" class="hud-metrics-row">
+    <!-- Tarjetas de métricas en vivo (Grilla 3x2: 6 dimensiones biomecánicas) -->
+    <div v-if="phase === 'running'" class="hud-metrics-grid">
       <!-- 1. Intensidad -->
       <div class="hud-card">
-        <span class="hud-label">Intensidad</span>
+        <span class="hud-label">1. Intensidad</span>
         <strong class="hud-value" :style="{ color: intensityLevel.color }">
           {{ intensityLevel.label }}
         </strong>
         <span class="hud-sub">{{ metrics.steps }} pasos ({{ cadencePerMin }} pasos/min)</span>
       </div>
 
-      <!-- 2. Ángulos Tren Inferior -->
+      <!-- 2. Postura del Torso (Encogimiento y Verticalidad) -->
+      <div class="hud-card" :class="{ 'card-alert': torsoStatus.alert }">
+        <span class="hud-label">2. Postura y Torso</span>
+        <strong class="hud-value" :style="{ color: torsoStatus.color }">
+          {{ torsoStatus.label }}
+        </strong>
+        <span class="hud-sub">Altura torso: {{ metrics.torsoHeightPct }}% • Inclinación: {{ metrics.trunkTiltAngle }}°</span>
+      </div>
+
+      <!-- 3. Ángulos Tren Inferior -->
       <div class="hud-card">
-        <span class="hud-label">Tren Inferior (I / D)</span>
+        <span class="hud-label">3. Tren Inferior (I / D)</span>
         <strong class="hud-value">{{ metrics.leftKneeAngle }}° / {{ metrics.rightKneeAngle }}°</strong>
         <span class="hud-sub">Caderas: {{ metrics.leftHipAngle }}° / {{ metrics.rightHipAngle }}°</span>
       </div>
 
-      <!-- 3. Ángulos Tren Superior -->
+      <!-- 4. Ángulos Tren Superior -->
       <div class="hud-card card-upper">
-        <span class="hud-label">Tren Superior (I / D)</span>
+        <span class="hud-label">4. Tren Superior (I / D)</span>
         <strong class="hud-value text-upper">{{ metrics.leftShoulderAngle }}° / {{ metrics.rightShoulderAngle }}°</strong>
         <span class="hud-sub">Codos: {{ metrics.leftElbowAngle }}° / {{ metrics.rightElbowAngle }}°</span>
       </div>
 
-      <!-- 4. Amplitud de Movimiento (ROM) -->
+      <!-- 5. Amplitud de Movimiento (ROM) -->
       <div class="hud-card">
-        <span class="hud-label">Amplitud Max (ROM)</span>
+        <span class="hud-label">5. Amplitud Max (ROM)</span>
         <strong class="hud-value">Pierna {{ averageKneeROM }}°</strong>
         <span class="hud-sub">Braceo hombro: {{ averageShoulderROM }}°</span>
       </div>
 
-      <!-- 5. Centro de Gravedad / Masa -->
+      <!-- 6. Centro de Gravedad / Masa -->
       <div class="hud-card">
-        <span class="hud-label">Centro de Masa (CoM)</span>
+        <span class="hud-label">6. Centro de Masa (CoM)</span>
         <strong class="hud-value">X:{{ metrics.comX }}% Y:{{ metrics.comY }}%</strong>
         <span class="hud-sub">Oscilación: ±{{ metrics.comMaxSwayX }}% H / ±{{ metrics.comMaxSwayY }}% V</span>
       </div>
@@ -491,19 +584,25 @@ onBeforeUnmount(() => {
 
         <div class="summary-grid">
           <div class="summary-item">
-            <span>Intensidad y Pasos</span>
+            <span>1. Intensidad y Pasos</span>
             <strong>{{ intensityLevel.label }} — {{ metrics.steps }} pasos ({{ cadencePerMin }}/min)</strong>
           </div>
           <div class="summary-item">
-            <span>Amplitud Tren Inferior (Rodillas y Cadera)</span>
+            <span>2. Postura del Torso y Fatiga (Verticalidad)</span>
+            <strong>
+              Altura torso mínima: {{ metrics.minTorsoHeightPct }}% (encogimiento {{ Math.max(0, 100 - metrics.minTorsoHeightPct) }}%) • Inclinación máx: {{ metrics.maxTrunkTiltAngle }}°
+            </strong>
+          </div>
+          <div class="summary-item">
+            <span>3. Amplitud Tren Inferior (Rodillas y Cadera)</span>
             <strong>Rodillas: Izq {{ metrics.maxLeftKneeROM }}° | Der {{ metrics.maxRightKneeROM }}° • Cadera: {{ metrics.maxHipROM }}°</strong>
           </div>
           <div class="summary-item">
-            <span>Amplitud Tren Superior (Braceo y Codos)</span>
+            <span>4. Amplitud Tren Superior (Braceo y Codos)</span>
             <strong>Hombros: Izq {{ metrics.maxLeftShoulderROM }}° | Der {{ metrics.maxRightShoulderROM }}° • Codos: Izq {{ metrics.maxLeftElbowROM }}° | Der {{ metrics.maxRightElbowROM }}°</strong>
           </div>
           <div class="summary-item">
-            <span>Estabilidad Centro de Gravedad</span>
+            <span>5. Estabilidad Centro de Gravedad</span>
             <strong>Oscilación lateral ±{{ metrics.comMaxSwayX }}% • vertical ±{{ metrics.comMaxSwayY }}%</strong>
           </div>
         </div>
@@ -530,7 +629,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 18px 28px;
+  padding: 16px 26px;
   box-sizing: border-box;
   pointer-events: none;
 }
@@ -588,32 +687,37 @@ onBeforeUnmount(() => {
   font-size: 0.95rem;
 }
 
-.hud-metrics-row {
+.hud-metrics-grid {
   position: relative;
   z-index: 12;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 
 .hud-card {
   background: rgba(15, 23, 42, 0.86);
   backdrop-filter: blur(10px);
   border: 2px solid rgba(255, 255, 255, 0.16);
-  border-radius: 18px;
-  padding: 12px 14px;
+  border-radius: 16px;
+  padding: 10px 14px;
   color: #ffffff;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .card-upper {
   border-color: rgba(56, 189, 248, 0.45);
 }
 
+.card-alert {
+  border-color: #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.3);
+}
+
 .hud-label {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #cbd5e1;
@@ -621,7 +725,7 @@ onBeforeUnmount(() => {
 }
 
 .hud-value {
-  font-size: 1.32rem;
+  font-size: 1.25rem;
   font-weight: 900;
   color: #22c55e;
 }
@@ -631,7 +735,7 @@ onBeforeUnmount(() => {
 }
 
 .hud-sub {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #94a3b8;
 }
 
@@ -649,44 +753,46 @@ onBeforeUnmount(() => {
 
 .summary-card {
   background: #fffdf9;
-  max-width: 580px;
+  max-width: 600px;
   width: 100%;
-  padding: 28px;
+  padding: 26px;
   text-align: center;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .summary-card h2 {
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   color: var(--motriz-red-primary);
-  font-size: 1.55rem;
+  font-size: 1.5rem;
 }
 
 .summary-grid {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   text-align: left;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .summary-item {
   background: #fff5ea;
   border: 1.5px solid #e2d2c1;
   border-radius: 14px;
-  padding: 12px 16px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .summary-item span {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--motriz-text-muted);
   font-weight: 700;
 }
 
 .summary-item strong {
-  font-size: 1.02rem;
+  font-size: 0.98rem;
   color: var(--motriz-text-main);
 }
 
@@ -696,8 +802,8 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
-@media (max-width: 1100px) {
-  .hud-metrics-row {
+@media (max-width: 960px) {
+  .hud-metrics-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
