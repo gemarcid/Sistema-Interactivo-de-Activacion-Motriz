@@ -6,8 +6,8 @@ import { playClickTone, playSelectTone } from '../../composables/useAudio'
 
 const emit = defineEmits(['start-game', 'create-profile', 'open-lab'])
 
-const { bodyDetected, isAligned } = useCamera()
-const { activeProfile } = useProfiles()
+const { bodyDetected } = useCamera()
+const { activeProfile, isLeftHanded, isRightHanded, dominantHand, toggleDominantHand } = useProfiles()
 
 function handleStart() {
   playSelectTone()
@@ -23,10 +23,18 @@ function handleLab() {
   playClickTone()
   emit('open-lab')
 }
+
+function handleToggleHand() {
+  playSelectTone()
+  toggleDominantHand()
+}
 </script>
 
 <template>
-  <div class="home-screen-overlay">
+  <div
+    class="home-screen-overlay"
+    :class="{ 'layout-left-handed': isLeftHanded, 'layout-right-handed': isRightHanded }"
+  >
     <!-- Top-Center Guidance Pill -->
     <div class="top-guidance-pill">
       <span class="pulse-dot" :class="{ 'dot-active': bodyDetected }"></span>
@@ -43,13 +51,49 @@ function handleLab() {
 
     <!-- Center Stage Greeting (Translucent & Senior-friendly) -->
     <div v-if="activeProfile" class="center-welcome-tag">
-      <span class="tag-label">SESIÓN ACTIVA</span>
-      <h2 class="tag-name">{{ activeProfile.name }}</h2>
-      <span class="tag-meta">{{ activeProfile.heightCm }} cm estatura • Movilidad: {{ activeProfile.difficulty }}</span>
+      <div class="tag-top-row">
+        <span class="tag-label">SESIÓN ACTIVA</span>
+        <button
+          type="button"
+          class="hand-adaptation-badge"
+          :title="'Cambiar mano dominante (actualmente: ' + dominantHand + ')'"
+          @click="handleToggleHand"
+        >
+          <span v-if="isLeftHanded">👈 Modo Zurdo (Mano Izquierda)</span>
+          <span v-else>👉 Modo Diestro (Mano Derecha)</span>
+          <span class="badge-swap-icon">🔄</span>
+        </button>
+      </div>
+
+      <h2 class="tag-name">{{ activeProfile.avatar || '👴' }} {{ activeProfile.name }}</h2>
+      <div class="tag-meta-row">
+        <span class="tag-meta">{{ activeProfile.heightCm }} cm estatura</span>
+        <span class="tag-sep">•</span>
+        <span class="tag-meta">{{ activeProfile.age }} años</span>
+        <span class="tag-sep">•</span>
+        <span class="tag-meta">Movilidad: {{ activeProfile.difficulty || 'Fácil' }}</span>
+      </div>
     </div>
 
-    <!-- Bottom Capsule Buttons Area (Enlarged for Easy Accessibility) -->
-    <div class="home-action-dock">
+    <!-- Hand Dominance Floating Bar (Explains button shift) -->
+    <div class="hand-banner-pill" :class="{ 'banner-left': isLeftHanded, 'banner-right': isRightHanded }">
+      <span class="hand-icon-indicator">{{ isLeftHanded ? '👈' : '👉' }}</span>
+      <span class="hand-text-indicator">
+        Botones ajustados a la <strong>{{ isLeftHanded ? 'izquierda' : 'derecha' }}</strong> para la comodidad del abuelo.
+      </span>
+      <button type="button" class="btn-toggle-quick" @click="handleToggleHand">
+        Cambiar a {{ isLeftHanded ? 'derecha 👉' : 'izquierda 👈' }}
+      </button>
+    </div>
+
+    <!-- Bottom Capsule Buttons Area (Reposicionado según mano dominante) -->
+    <div
+      class="home-action-dock"
+      :class="{
+        'dock-align-left': isLeftHanded,
+        'dock-align-right': isRightHanded,
+      }"
+    >
       <!-- 🚀 NUEVA PARTIDA (Crimson 3D Capsule - Extra Large) -->
       <button
         type="button"
@@ -62,7 +106,7 @@ function handleLab() {
         <span class="btn-label">NUEVA PARTIDA</span>
       </button>
 
-      <!-- 👤+ CREAR NUEVO PERFIL (Ivory 3D Capsule - Extra Large) -->
+      <!-- 👤+ DATOS / CAMBIAR ABUELO (Ivory 3D Capsule - Extra Large) -->
       <button
         type="button"
         class="btn-motriz-secondary btn-home-secondary"
@@ -74,7 +118,7 @@ function handleLab() {
           <line x1="20" y1="8" x2="20" y2="14" stroke-linecap="round"/>
           <line x1="23" y1="11" x2="17" y2="11" stroke-linecap="round"/>
         </svg>
-        <span class="btn-label">CREAR NUEVO PERFIL</span>
+        <span class="btn-label">DATOS DEL ABUELO</span>
       </button>
 
       <!-- 🧪 ZONA DE PRUEBAS / PROTOTIPOS -->
@@ -104,10 +148,11 @@ function handleLab() {
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 36px 54px;
+  padding: 24px 36px 48px;
   box-sizing: border-box;
   z-index: 10;
   pointer-events: none;
+  transition: all 0.3s ease;
 }
 
 .home-screen-overlay > * {
@@ -146,17 +191,24 @@ function handleLab() {
   color: var(--motriz-text-main);
 }
 
+/* Center stage greeting */
 .center-welcome-tag {
-  background: rgba(255, 253, 249, 0.9);
+  background: rgba(255, 253, 249, 0.92);
   backdrop-filter: blur(12px);
-  padding: 14px 34px;
+  padding: 16px 36px;
   border-radius: 32px;
-  border: 2px solid rgba(232, 221, 208, 0.8);
+  border: 2px solid rgba(232, 221, 208, 0.85);
   box-shadow: 0 8px 24px rgba(60, 25, 20, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+}
+
+.tag-top-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .tag-label {
@@ -166,11 +218,41 @@ function handleLab() {
   letter-spacing: 0.14em;
 }
 
+.hand-adaptation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: #FDF2E9;
+  border: 1.5px solid #F5C6A5;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #8C1D2C;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.hand-adaptation-badge:hover {
+  background: #FEE8D6;
+  transform: scale(1.04);
+}
+
+.badge-swap-icon {
+  font-size: 0.8rem;
+}
+
 .tag-name {
-  margin: 3px 0 6px;
-  font-size: 1.75rem;
+  margin: 4px 0 6px;
+  font-size: 1.85rem;
   font-weight: 900;
   color: var(--motriz-text-main);
+}
+
+.tag-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .tag-meta {
@@ -179,33 +261,103 @@ function handleLab() {
   font-weight: 600;
 }
 
-/* Bottom Action Dock (Extra Large & Accessible) */
+.tag-sep {
+  color: #C0B0A0;
+}
+
+/* Hand Banner Pill */
+.hand-banner-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 253, 249, 0.92);
+  backdrop-filter: blur(10px);
+  padding: 8px 20px;
+  border-radius: 9999px;
+  border: 1.5px solid #E2D3C4;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  font-size: 0.92rem;
+  color: #4D3C33;
+  margin-bottom: 8px;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.banner-left {
+  align-self: flex-start;
+  margin-left: 48px;
+  border-left: 4px solid #8C1D2C;
+}
+
+.banner-right {
+  align-self: flex-end;
+  margin-right: 48px;
+  border-right: 4px solid #8C1D2C;
+}
+
+.hand-icon-indicator {
+  font-size: 1.3rem;
+}
+
+.btn-toggle-quick {
+  background: #8C1D2C;
+  color: #FFF;
+  border: none;
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-toggle-quick:hover {
+  opacity: 0.9;
+}
+
+/* ========================================================
+   BOTTOM ACTION DOCK - ADAPTACIÓN SEGÚN MANO DOMINANTE
+   ======================================================== */
 .home-action-dock {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 28px;
+  gap: 24px;
   width: 100%;
-  max-width: 1200px;
+  max-width: 1300px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* MODO ZURDO: Alinea y ordena los botones hacia la izquierda */
+.dock-align-left {
+  justify-content: flex-start;
+  flex-direction: row;
+  padding-left: 24px;
+}
+
+/* MODO DIESTRO: Alinea y ordena los botones hacia la derecha */
+.dock-align-right {
+  justify-content: flex-end;
+  flex-direction: row-reverse;
+  padding-right: 24px;
 }
 
 .btn-home-primary {
-  min-width: 370px;
-  padding: 24px 48px;
+  min-width: 360px;
+  padding: 24px 46px;
   font-size: 1.65rem;
   border-width: 3px;
+  box-shadow: 0 10px 24px rgba(140, 29, 44, 0.32);
 }
 
 .btn-home-secondary {
-  min-width: 370px;
-  padding: 24px 44px;
-  font-size: 1.5rem;
+  min-width: 350px;
+  padding: 24px 42px;
+  font-size: 1.45rem;
   border-width: 3px;
 }
 
 .btn-home-lab {
-  padding: 22px 32px;
-  font-size: 1.22rem;
+  padding: 22px 30px;
+  font-size: 1.2rem;
   border-width: 2.5px;
 }
 
@@ -216,8 +368,13 @@ function handleLab() {
 
 @media (max-width: 960px) {
   .home-action-dock {
-    flex-direction: column;
+    flex-direction: column !important;
     gap: 16px;
+    padding: 0 !important;
+  }
+  .hand-banner-pill {
+    align-self: center !important;
+    margin: 0 !important;
   }
   .btn-home-primary,
   .btn-home-secondary,

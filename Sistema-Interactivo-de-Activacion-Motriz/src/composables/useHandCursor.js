@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 import { playClickTone, playSuccessChime, playPopTone } from './useAudio'
+import { useProfiles } from './useProfiles'
 
 // Global hand cursor state
 export const handCursorState = reactive({
@@ -19,36 +20,43 @@ let dwellTimer = 0
 const DWELL_DURATION = 0.32 // Reducido a la mitad para una activación ultra rápida y fluida
 
 export function useHandCursor() {
+  const { dominantHand } = useProfiles()
+
+  const VISIBILITY_THRESHOLD = 0.2
+
+  function deactivateCursor() {
+    handCursorState.active = false
+    handCursorState.isHovering = false
+    handCursorState.dwellProgress = 0
+    currentHoverElement = null
+  }
+
+  function pickVisibleLandmark(indexLm, wristLm) {
+    if (indexLm && (indexLm.visibility ?? 1) >= VISIBILITY_THRESHOLD) {
+      return indexLm
+    }
+    if (wristLm && (wristLm.visibility ?? 1) >= VISIBILITY_THRESHOLD) {
+      return wristLm
+    }
+    return null
+  }
+
   function updateHandCursor(landmarks, videoWidth, videoHeight, dt = 0.016) {
     if (!landmarks || landmarks.length === 0) {
-      handCursorState.active = false
-      handCursorState.dwellProgress = 0
-      currentHoverElement = null
+      deactivateCursor()
       return
     }
 
     // MediaPipe Pose Landmarks:
     // 15: left_wrist, 16: right_wrist, 19: left_index, 20: right_index
-    const leftIndex = landmarks[19] || landmarks[15]
-    const rightIndex = landmarks[20] || landmarks[16]
-
-    // Determine which hand is active / higher
-    let chosenHand = null
-    if (leftIndex && rightIndex) {
-      chosenHand = leftIndex.y < rightIndex.y ? leftIndex : rightIndex
-    } else {
-      chosenHand = leftIndex || rightIndex
-    }
+    // Seguir ESTRICTAMENTE únicamente la mano dominante configurada (sin cambiar a la otra mano)
+    const isLeftDominant = dominantHand.value === 'IZQUIERDA'
+    const chosenHand = isLeftDominant
+      ? pickVisibleLandmark(landmarks[19], landmarks[15])
+      : pickVisibleLandmark(landmarks[20], landmarks[16])
 
     if (!chosenHand) {
-      handCursorState.active = false
-      return
-    }
-
-    // Hand visibility threshold (tolerante para evitar parpadeos)
-    const vis = chosenHand.visibility ?? 1
-    if (vis < 0.2) {
-      handCursorState.active = false
+      deactivateCursor()
       return
     }
 
@@ -98,65 +106,54 @@ export function useHandCursor() {
 
       if (clickable === currentHoverElement) {
         dwellTimer += dt
-        handCursorState.dwellProgress = Math.min(dwellTimer / DWELL_DURATION, 1.0)
+        handCursorState.dwellProgress = Math.min(1, dwellTimer / DWELL_DURATION)
 
-        // Trigger Click when dwell completes!
-        if (handCursorState.dwellProgress >= 1.0) {
-          handCursorState.lastClickedAt = now
-          handCursorState.dwellProgress = 0
+        if (dwellTimer >= DWELL_DURATION) {
+          triggerClick(clickable)
           dwellTimer = 0
-          playSuccessChime()
-
-          try {
-            clickable.click()
-            clickable.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
-            clickable.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
-          } catch (e) {
-            console.warn('Error clicking element via hand:', e)
-          }
+          handCursorState.dwellProgress = 0
+          handCursorState.lastClickedAt = now
         }
       } else {
         currentHoverElement = clickable
         dwellTimer = 0
         handCursorState.dwellProgress = 0
-        playPopTone()
       }
     } else {
       handCursorState.isHovering = false
       handCursorState.hoverTargetName = ''
+      handCursorState.dwellProgress = 0
       currentHoverElement = null
       dwellTimer = 0
-      handCursorState.dwellProgress = 0
     }
   }
 
   function findClickable(el) {
     if (!el) return null
-    let cur = el
-    while (cur && cur !== document.body) {
-      if (cur.classList.contains('motriz-modal-overlay') || cur.tagName === 'CANVAS' || cur.tagName === 'VIDEO') {
-        return null
-      }
+    let curr = el
+    while (curr && curr !== document.body) {
+      const tag = curr.tagName?.toLowerCase()
       if (
-        cur.tagName === 'BUTTON' ||
-        cur.tagName === 'A' ||
-        cur.getAttribute('role') === 'button' ||
-        cur.classList.contains('clickable') ||
-        cur.classList.contains('btn-motriz-primary') ||
-        cur.classList.contains('btn-motriz-secondary') ||
-        cur.classList.contains('btn-round-action') ||
-        cur.classList.contains('lab-card') ||
-        cur.classList.contains('game-card') ||
-        cur.classList.contains('profile-item-card') ||
-        cur.classList.contains('tab-btn') ||
-        cur.classList.contains('diff-pill') ||
-        cur.classList.contains('avatar-opt-btn')
+        tag === 'button' ||
+        tag === 'a' ||
+        curr.getAttribute('role') === 'button' ||
+        curr.classList?.contains('clickable') ||
+        curr.classList?.contains('profile-item-card') ||
+        curr.classList?.contains('logo-area') ||
+        curr.classList?.contains('hand-card-btn')
       ) {
-        return cur
+        if (!curr.disabled && !curr.classList?.contains('disabled')) {
+          return curr
+        }
       }
-      cur = cur.parentElement
+      curr = curr.parentElement
     }
     return null
+  }
+
+  function triggerClick(el) {
+    playClickTone()
+    el.click()
   }
 
   return {
