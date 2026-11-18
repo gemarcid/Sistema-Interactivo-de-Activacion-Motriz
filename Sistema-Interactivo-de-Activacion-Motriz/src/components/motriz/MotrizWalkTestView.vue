@@ -1,14 +1,17 @@
 <script setup>
 import { ref, reactive, computed, watch, onBeforeUnmount } from 'vue'
 import { useCamera } from '../../composables/useCamera'
+import { useHandCursor } from '../../composables/useHandCursor'
 import MotrizCalibrationView from './MotrizCalibrationView.vue'
 
 const emit = defineEmits(['finish', 'exit'])
 
 const { bodyState, bodyDetected } = useCamera()
+const { setHandCursorEnabled } = useHandCursor()
 
 // Fases del módulo: 'calibration' -> 'running' -> 'finished'
 const phase = ref('calibration')
+watch(phase, (value) => setHandCursorEnabled(value !== 'running'), { flush: 'sync' })
 
 // Duración corta para adulto mayor (30 segundos)
 const TEST_DURATION = 30
@@ -308,6 +311,7 @@ function drawBiomechanicalOverlay(lm) {
 
 onBeforeUnmount(() => {
   clearInterval(timerInterval)
+  setHandCursorEnabled(true)
 })
 </script>
 

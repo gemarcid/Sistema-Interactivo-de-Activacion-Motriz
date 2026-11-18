@@ -3,11 +3,14 @@ import { ref } from 'vue'
 import { playClickTone, playSelectTone } from '../../composables/useAudio'
 import BalloonGame from '../BalloonGame.vue'
 import MotrizGameView from './MotrizGameView.vue'
+import MotrizMovementIcon from './MotrizMovementIcon.vue'
+import { movements } from '../../game/moveRemember/round'
 import MotrizWalkTestView from './MotrizWalkTestView.vue'
 
-const emit = defineEmits(['back'])
+const emit = defineEmits(['back', 'open-move-remember'])
 
-const activeTab = ref('hub') // 'hub' | 'unach-cif' | 'alcanza-colores' | 'caminata lenta'
+const activeTab = ref('hub')
+const memoryIcon = movements.find(({ id }) => id === 'both-arms-up')
 
 function handleSelect(tab) {
   playSelectTone()
@@ -22,10 +25,15 @@ function handleBack() {
     emit('back')
   }
 }
+
+function openMoveRemember() {
+  playSelectTone()
+  emit('open-move-remember')
+}
 </script>
 
 <template>
-  <div class="lab-container">
+  <div class="lab-container" :class="{ 'lab-playing': activeTab === 'unach-cif' || activeTab === 'alcanza-colores' }">
     <!-- Sub-Game: UNACH CIF Test Game -->
     <div v-if="activeTab === 'unach-cif'" class="subgame-wrapper cif-theme">
       <div class="subgame-nav">
@@ -109,7 +117,16 @@ function handleBack() {
             Abrir Prototipo
           </button>
         </div>
-        
+
+        <div class="lab-card" @click="openMoveRemember">
+          <MotrizMovementIcon :arms="memoryIcon.arms" class="card-icon memory-icon" />
+          <h3>Mueve y Recuerda</h3>
+          <p>Memoriza la secuencia y reproduce los movimientos con tu cuerpo frente a la cámara.</p>
+          <button type="button" class="btn-motriz-primary btn-launch">
+            Abrir Mueve y Recuerda
+          </button>
+        </div>
+
         <!-- 4. Prototipo de Caminata Lenta -->
         <div class="lab-card" @click="handleSelect('caminata-lenta')">
           <div class="card-pill-tag tag-ready">Listo para Probar</div>
@@ -122,7 +139,6 @@ function handleBack() {
             Abrir Prototipo
           </button>
         </div>
-
       </div>
 
       <div class="lab-footer">
@@ -136,14 +152,21 @@ function handleBack() {
 
 <style scoped>
 .lab-container {
-  min-height: calc(100vh - 88px);
+  flex: 1 0 auto;
   position: relative;
   z-index: 10;
   display: flex;
   flex-direction: column;
 }
 
+.lab-playing,
+.lab-playing .subgame-wrapper {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
 .lab-hub-content {
+  width: 100%;
   max-width: 1100px;
   margin: 0 auto;
   padding: 30px 24px 40px;
@@ -175,7 +198,7 @@ function handleBack() {
 
 .lab-cards-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr));
   gap: 24px;
   width: 100%;
   margin-bottom: 36px;
@@ -223,6 +246,12 @@ function handleBack() {
 .card-icon {
   font-size: 3rem;
   margin-bottom: 12px;
+}
+
+.memory-icon {
+  width: 54px;
+  height: 54px;
+  color: var(--motriz-red-primary);
 }
 
 .lab-card h3 {
@@ -279,12 +308,12 @@ function handleBack() {
 
 /* Subgame */
 .subgame-wrapper {
-  flex-grow: 1;
   display: flex;
   flex-direction: column;
 }
 
 .subgame-nav {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -304,9 +333,19 @@ function handleBack() {
   color: var(--motriz-red-primary);
 }
 
-@media (max-width: 900px) {
-  .lab-cards-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 600px), (max-height: 600px) {
+  .lab-playing .subgame-nav {
+    padding: 6px 10px;
+    gap: 8px;
+  }
+
+  .lab-playing .btn-nav-back,
+  .lab-playing .subgame-title {
+    font-size: 0.86rem;
+  }
+
+  .lab-playing .btn-nav-back {
+    padding: 6px 10px;
   }
 }
 </style>

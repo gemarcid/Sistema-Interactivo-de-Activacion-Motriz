@@ -7,6 +7,7 @@ import MotrizHeader from './components/motriz/MotrizHeader.vue'
 import MotrizHomeView from './components/motriz/MotrizHomeView.vue'
 import MotrizCalibrationView from './components/motriz/MotrizCalibrationView.vue'
 import MotrizTestingLabView from './components/motriz/MotrizTestingLabView.vue'
+import MotrizMoveRememberView from './components/motriz/MotrizMoveRememberView.vue'
 import MotrizInitialForm from './components/motriz/MotrizInitialForm.vue'
 import MotrizProfileModal from './components/motriz/MotrizProfileModal.vue'
 import MotrizProgressModal from './components/motriz/MotrizProgressModal.vue'
@@ -51,11 +52,12 @@ function handleOpenOriginalCIF() {
     }"
     :data-dominant-hand="dominantHand.toLowerCase()"
   >
-    <MotrizBackgroundCamera />
+    <MotrizBackgroundCamera :show-startup="currentView !== 'move-remember'" />
 
     <MotrizHandCursor />
 
     <MotrizHeader
+      v-if="currentView !== 'move-remember'"
       :show-back="currentView !== 'home'"
       :back-label="currentView === 'calibration' ? 'Salir' : 'Menú Principal'"
       @back="currentView = 'home'"
@@ -75,6 +77,7 @@ function handleOpenOriginalCIF() {
 
       <MotrizCalibrationView
         v-else-if="currentView === 'calibration'"
+        class="prep-fit-screen"
         @start-play="handleOpenLab"
         @exit="currentView = 'home'"
       />
@@ -82,6 +85,12 @@ function handleOpenOriginalCIF() {
       <MotrizTestingLabView
         v-else-if="currentView === 'lab'"
         @back="currentView = 'home'"
+        @open-move-remember="currentView = 'move-remember'"
+      />
+
+      <MotrizMoveRememberView
+        v-else-if="currentView === 'move-remember'"
+        @exit="handleOpenLab"
       />
     </main>
 
@@ -118,20 +127,23 @@ function handleOpenOriginalCIF() {
 <style scoped>
 .app-root {
   position: relative;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s ease;
 }
 
 .motriz-main-stage {
-  flex-grow: 1;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
   position: relative;
   z-index: 10;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 </style>
