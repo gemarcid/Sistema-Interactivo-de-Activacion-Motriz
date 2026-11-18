@@ -5,6 +5,7 @@ import BalloonGame from '../BalloonGame.vue'
 import MotrizGameView from './MotrizGameView.vue'
 import MotrizMovementIcon from './MotrizMovementIcon.vue'
 import { movements } from '../../game/moveRemember/round'
+import MotrizWalkTestView from './MotrizWalkTestView.vue'
 
 const emit = defineEmits(['back', 'open-move-remember'])
 
@@ -53,6 +54,17 @@ function openMoveRemember() {
         <span class="subgame-title">Prototipo Alcanza los Colores</span>
       </div>
       <MotrizGameView @finish="activeTab = 'hub'" @exit="activeTab = 'hub'" />
+    </div>
+
+    <!-- Sub-Game: Caminata Lenta -->
+    <div v-else-if="activeTab === 'caminata-lenta'" class="subgame-wrapper">
+      <div class="subgame-nav">
+        <button type="button" class="btn-motriz-secondary btn-nav-back" @click="activeTab = 'hub'">
+          ← Volver a Zona de Pruebas
+        </button>
+        <span class="subgame-title">Prototipo de Caminata Lenta</span>
+      </div>
+      <MotrizWalkTestView @finish="activeTab = 'hub'" @exit="activeTab = 'hub'" />
     </div>
 
     <!-- Lab Hub Main View -->
@@ -112,6 +124,19 @@ function openMoveRemember() {
           <p>Memoriza la secuencia y reproduce los movimientos con tu cuerpo frente a la cámara.</p>
           <button type="button" class="btn-motriz-primary btn-launch">
             Abrir Mueve y Recuerda
+          </button>
+        </div>
+
+        <!-- 4. Prototipo de Caminata Lenta -->
+        <div class="lab-card" @click="handleSelect('caminata-lenta')">
+          <div class="card-pill-tag tag-ready">Listo para Probar</div>
+          <div class="card-icon">🚶‍♂️</div>
+          <h3>Prueba de Caminata Lenta</h3>
+          <p>
+            Medición de rendimiento biomecánico en el lugar: intensidad, ángulos de articulaciones y centro de gravedad.
+          </p>
+          <button type="button" class="btn-motriz-primary btn-launch">
+            Abrir Prototipo
           </button>
         </div>
       </div>

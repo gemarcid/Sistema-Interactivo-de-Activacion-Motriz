@@ -4,6 +4,7 @@ import { useProfiles } from './useProfiles'
 
 // Global hand cursor state
 export const handCursorState = reactive({
+  disabled: false, // <-- Propiedad para silenciar/apagar el cursor a demanda
   active: false,
   x: window.innerWidth / 2,
   y: window.innerHeight / 2,
@@ -43,7 +44,7 @@ export function useHandCursor() {
   }
 
   function updateHandCursor(landmarks, videoWidth, videoHeight, dt = 0.016) {
-    if (!enabled || !landmarks || landmarks.length === 0) {
+    if (!enabled || handCursorState.disabled || !landmarks || landmarks.length === 0) {
       deactivateCursor()
       return
     }
