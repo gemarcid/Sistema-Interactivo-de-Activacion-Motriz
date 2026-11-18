@@ -1,21 +1,29 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import { initDatabase } from './src/database/init.js';
-import patientController from './src/database/controllers/patientController.js';
-
-// Inicializar la base de datos SQLite con los esquemas de init.sql
-try {
-  initDatabase();
-} catch (e) {
-  console.warn('Advertencia al inicializar SQLite:', e.message);
-}
 
 function sqliteApiPlugin() {
   return {
     name: 'sqlite-api-plugin',
-    configureServer(server) {
+    async configureServer(server) {
+      let patientController = null;
+      try {
+        const initMod = await import('./src/main/database/init.js');
+        if (initMod.initDatabase) initMod.initDatabase();
+        const ctrlMod = await import('./src/main/database/controllers/patientController.js');
+        patientController = ctrlMod.default || ctrlMod;
+      } catch (e) {
+        console.warn('Advertencia al inicializar SQLite en Vite:', e.message);
+      }
+
       server.middlewares.use(async (req, res, next) => {
         if (req.url && req.url.startsWith('/api/pacientes')) {
+          if (!patientController) {
+            res.statusCode = 503;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: false, error: 'Base de datos SQLite no disponible' }));
+            return;
+          }
+
           if (req.method === 'GET') {
             try {
               const perfiles = await patientController.obtenerPerfiles();

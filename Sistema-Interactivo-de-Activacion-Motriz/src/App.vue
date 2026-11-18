@@ -6,8 +6,11 @@ import MotrizHandCursor from './components/layout/MotrizHandCursor.vue'
 import MotrizHeader from './components/layout/MotrizHeader.vue'
 import MotrizHomeView from './components/views/MotrizHomeView.vue'
 import MotrizCalibrationView from './components/views/MotrizCalibrationView.vue'
-import MotrizTestingLabView from './components/views/MotrizTestingLabView.vue'
+import MotrizWalkTestView from './components/views/MotrizWalkTestView.vue'
+import MotrizRestView from './components/views/MotrizRestView.vue'
 import MotrizMoveRememberView from './components/views/MotrizMoveRememberView.vue'
+import MotrizCompletedView from './components/views/MotrizCompletedView.vue'
+import MotrizTestingLabView from './components/views/MotrizTestingLabView.vue'
 import MotrizInitialForm from './components/forms/MotrizInitialForm.vue'
 import MotrizProfileModal from './components/modals/MotrizProfileModal.vue'
 import MotrizProgressModal from './components/modals/MotrizProgressModal.vue'
@@ -16,8 +19,9 @@ import MotrizHelpModal from './components/modals/MotrizHelpModal.vue'
 
 const { isLeftHanded, isRightHanded, dominantHand } = useProfiles()
 
-// Current active view
-const currentView = ref('home') // 'home' | 'calibration' | 'lab'
+// Estado de la vista activa en el flujo de juego
+// 'home' -> 'walk-test' -> 'rest' -> 'move-remember' -> 'completed' | 'lab'
+const currentView = ref('home')
 
 // Pantalla inicial del formulario del paciente (se muestra al iniciar o al solicitarlo)
 const showInitialForm = ref(true)
@@ -28,12 +32,28 @@ const showProgressModal = ref(false)
 const showSettingsModal = ref(false)
 const showHelpModal = ref(false)
 
-function handleInitialFormComplete(profile) {
+function handleInitialFormComplete() {
   showInitialForm.value = false
 }
 
+// Inicia el flujo guiado de la sesión: arranca en la caminata
 function handleStartNewGame() {
-  currentView.value = 'calibration'
+  currentView.value = 'walk-test'
+}
+
+// Al terminar la caminata (30s) -> pasa a la pantalla de descanso (30s)
+function handleWalkTestFinish() {
+  currentView.value = 'rest'
+}
+
+// Al confirmar continuar desde el descanso -> pasa a Mueve y Recuerda
+function handleRestContinue() {
+  currentView.value = 'move-remember'
+}
+
+// Al terminar la ronda de Mueve y Recuerda -> pasa a la pantalla de completado
+function handleMoveRememberFinish() {
+  currentView.value = 'completed'
 }
 
 function handleOpenLab() {
@@ -43,6 +63,10 @@ function handleOpenLab() {
 function handleOpenOriginalCIF() {
   showSettingsModal.value = false
   currentView.value = 'lab'
+}
+
+function handleExitToHome() {
+  currentView.value = 'home'
 }
 </script>
 
@@ -55,26 +79,26 @@ function handleOpenOriginalCIF() {
     }"
     :data-dominant-hand="dominantHand.toLowerCase()"
   >
-    <MotrizBackgroundCamera :show-startup="currentView !== 'move-remember'" />
+    <MotrizBackgroundCamera :show-startup="currentView === 'home'" />
 
     <!-- 2. VIRTUAL HAND CURSOR (Tracks hand movement & performs dwell click; mouse also works natively) -->
     <MotrizHandCursor />
 
     <!-- 3. TOP ASISTENCIA MOTRIZ HEADER -->
     <MotrizHeader
-      v-if="currentView !== 'move-remember'"
+      v-if="currentView !== 'completed'"
       :show-back="currentView !== 'home'"
-      :back-label="currentView === 'calibration' ? 'Salir' : 'Menú Principal'"
-      @back="currentView = 'home'"
+      :back-label="currentView === 'home' ? '' : 'Salir al Menú'"
+      @back="handleExitToHome"
       @open-settings="showSettingsModal = true"
       @open-help="showHelpModal = true"
       @open-profiles="showProfileModal = true"
       @open-patient-form="showInitialForm = true"
     />
 
-    <!-- 4. ACTIVE VIEW LAYER (Floating seamlessly over the fullscreen live camera) -->
+    <!-- 4. ACTIVE VIEW LAYER (Flujo interactivo guiado) -->
     <main class="motriz-main-stage">
-      <!-- Main Menu (Screen 1 with Fullscreen Camera) -->
+      <!-- 1. Menú Principal -->
       <MotrizHomeView
         v-if="currentView === 'home'"
         @start-game="handleStartNewGame"
@@ -82,23 +106,48 @@ function handleOpenOriginalCIF() {
         @open-lab="handleOpenLab"
       />
 
-      <!-- Preparation & Calibration Screen (Screen 3 with Fullscreen Silhouette) -->
-      <MotrizCalibrationView
-        v-else-if="currentView === 'calibration'"
-        @start-play="handleOpenLab"
-        @exit="currentView = 'home'"
+      <!-- 2. Flujo Paso 1: Caminata Test (con silueta cintura para abajo + botón comenzar arriba) -->
+      <MotrizWalkTestView
+        v-else-if="currentView === 'walk-test'"
+        @finish="handleWalkTestFinish"
+        @exit="handleExitToHome"
       />
 
-      <!-- Testing Lab: Preserves original UNACH CIF game + prototypes without deleting anything -->
-      <MotrizTestingLabView
-        v-else-if="currentView === 'lab'"
-        @back="currentView = 'home'"
-        @open-move-remember="currentView = 'move-remember'"
+      <!-- 3. Flujo Paso 2: Descanso de 30s (pregunta si continuar o 30s más en bucle + botón arriba) -->
+      <MotrizRestView
+        v-else-if="currentView === 'rest'"
+        :duration="30"
+        @continue="handleRestContinue"
+        @exit="handleExitToHome"
       />
 
+      <!-- 4. Flujo Paso 3: Mueve y Recuerda (con silueta cintura para arriba + botón comenzar arriba) -->
       <MotrizMoveRememberView
         v-else-if="currentView === 'move-remember'"
-        @exit="handleOpenLab"
+        @finish="handleMoveRememberFinish"
+        @exit="handleExitToHome"
+      />
+
+      <!-- 5. Flujo Paso 4: Sesión Completada (Trofeo, estrellas, felicitaciones) -->
+      <MotrizCompletedView
+        v-else-if="currentView === 'completed'"
+        @menu="handleExitToHome"
+        @next-level="handleStartNewGame"
+        @finish="handleExitToHome"
+      />
+
+      <!-- Calibración Independiente (si se invoca aisladamente) -->
+      <MotrizCalibrationView
+        v-else-if="currentView === 'calibration'"
+        @start-play="handleWalkTestFinish"
+        @exit="handleExitToHome"
+      />
+
+      <!-- Zona de Pruebas y Prototipos CIF -->
+      <MotrizTestingLabView
+        v-else-if="currentView === 'lab'"
+        @back="handleExitToHome"
+        @open-move-remember="currentView = 'move-remember'"
       />
     </main>
 

@@ -501,9 +501,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- FASE 1: Reutilización directa de la silueta de calibración del sistema -->
+  <!-- FASE 1: Calibración enfocada principalmente en la cintura para abajo -->
   <MotrizCalibrationView
     v-if="phase === 'calibration'"
+    mode="lower-body"
+    title="Calibración: Caminata"
+    lead-text="Enfoque de cintura hacia abajo • Despeja el área para caminar en el lugar"
+    button-text="COMENZAR CAMINATA"
     @start-play="handleStartAfterCalibration"
     @exit="$emit('exit')"
   />
@@ -580,7 +584,23 @@ onBeforeUnmount(() => {
     <!-- FASE 3: Resumen final al terminar los 30s -->
     <div v-if="phase === 'finished'" class="summary-backdrop">
       <div class="motriz-card summary-card">
-        <h2>Resultados Caminata Lenta ({{ TEST_DURATION }}s)</h2>
+        <div class="summary-header">
+          <h2>Resultados Caminata ({{ TEST_DURATION }}s)</h2>
+          <p class="summary-lead">6 Dimensiones Biomecánicas Registradas</p>
+        </div>
+
+        <!-- ACCIONES ARRIBA DEL TEXTO PARA NO AGACHARSE -->
+        <div class="summary-actions summary-actions-top">
+          <button type="button" class="btn-motriz-primary btn-advance-flow" @click="$emit('finish')">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            <span>CONTINUAR AL DESCANSO</span>
+          </button>
+          <button type="button" class="btn-motriz-secondary" @click="recalibrate">
+            Repetir Prueba
+          </button>
+        </div>
 
         <div class="summary-grid">
           <div class="summary-item">
@@ -605,15 +625,6 @@ onBeforeUnmount(() => {
             <span>5. Estabilidad Centro de Gravedad</span>
             <strong>Oscilación lateral ±{{ metrics.comMaxSwayX }}% • vertical ±{{ metrics.comMaxSwayY }}%</strong>
           </div>
-        </div>
-
-        <div class="summary-actions">
-          <button type="button" class="btn-motriz-secondary" @click="recalibrate">
-            Repetir Prueba
-          </button>
-          <button type="button" class="btn-motriz-primary" @click="$emit('finish')">
-            Volver a Zona de Pruebas
-          </button>
         </div>
       </div>
     </div>
@@ -794,6 +805,40 @@ onBeforeUnmount(() => {
 .summary-item strong {
   font-size: 0.98rem;
   color: var(--motriz-text-main);
+}
+
+.summary-header {
+  margin-bottom: 12px;
+}
+
+.summary-header h2 {
+  margin: 0;
+  color: var(--motriz-red-primary);
+  font-size: 1.6rem;
+}
+
+.summary-lead {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: var(--motriz-text-muted);
+}
+
+.summary-actions-top {
+  margin-bottom: 18px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-advance-flow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  border-radius: 9999px;
+  box-shadow: 0 6px 20px rgba(140, 29, 44, 0.3);
 }
 
 .summary-actions {
