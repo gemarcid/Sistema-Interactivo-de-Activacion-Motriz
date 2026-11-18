@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+#Base de datos SQLite local
+**/data/siam_prod.sqlite
+*.sqlite
+*.sqlite3
