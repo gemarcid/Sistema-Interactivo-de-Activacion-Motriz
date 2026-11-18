@@ -143,8 +143,7 @@ function handleToggleHand() {
 .home-screen-overlay {
   position: relative;
   width: 100%;
-  flex: 1;
-  gap: 12px;
+  height: calc(100vh - 96px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -367,10 +366,10 @@ function handleToggleHand() {
   height: 34px;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 960px) {
   .home-action-dock {
     flex-direction: column !important;
-    gap: 8px;
+    gap: 16px;
     padding: 0 !important;
   }
   .hand-banner-pill {
@@ -382,75 +381,6 @@ function handleToggleHand() {
   .btn-home-lab {
     width: 100%;
     min-width: unset;
-    padding: 10px 14px;
-    font-size: 1.12rem;
-  }
-}
-
-@media (max-width: 700px), (max-height: 620px) {
-  .home-screen-overlay {
-    padding: 8px 12px;
-  }
-
-  .top-guidance-pill,
-  .center-welcome-tag,
-  .hand-banner-pill {
-    padding: 6px 10px;
-  }
-
-  .guidance-text {
-    font-size: 0.95rem;
-  }
-
-  .hand-banner-pill,
-  .tag-top-row,
-  .tag-meta-row {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-}
-
-@media (max-height: 480px) and (min-width: 600px) {
-  .home-action-dock {
-    flex-direction: row !important;
-  }
-
-  .btn-home-primary,
-  .btn-home-secondary,
-  .btn-home-lab {
-    min-width: 0;
-    padding: 8px 12px;
-    font-size: 1rem;
-  }
-}
-
-@media (max-height: 560px) {
-  .home-screen-overlay {
-    gap: 6px;
-  }
-
-  .hand-banner-pill {
-    display: none;
-  }
-
-  .top-guidance-pill {
-    gap: 6px;
-  }
-
-  .tag-name {
-    font-size: 1.3rem;
-  }
-
-  .btn-home-primary,
-  .btn-home-secondary,
-  .btn-home-lab {
-    padding: 6px 10px;
-    min-height: 44px;
-  }
-
-  .action-icon {
-    width: 24px;
-    height: 24px;
   }
 }
 </style>

@@ -136,7 +136,6 @@ function handleToggleHand() {
 <style scoped>
 .motriz-header {
   display: flex;
-  flex: none;
   align-items: center;
   justify-content: space-between;
   padding: 16px 36px;
@@ -311,46 +310,6 @@ function handleToggleHand() {
   }
   .brand-text, .profile-pill-badge {
     display: none;
-  }
-}
-
-@media (max-width: 530px), (max-height: 520px) {
-  .motriz-header {
-    padding: 4px 8px;
-    gap: 6px;
-  }
-
-  .header-actions,
-  .logo-area {
-    gap: 4px;
-  }
-
-  .logo-emblem,
-  .btn-round-action {
-    width: 38px;
-    height: 38px;
-  }
-
-  .header-back-btn,
-  .btn-hand-toggle {
-    padding: 5px 8px;
-  }
-}
-
-@media (max-width: 420px) {
-  .header-back-btn {
-    min-width: 38px;
-    min-height: 38px;
-    justify-content: center;
-  }
-
-  .header-back-btn span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    clip-path: inset(50%);
-    overflow: hidden;
-    white-space: nowrap;
   }
 }
 </style>

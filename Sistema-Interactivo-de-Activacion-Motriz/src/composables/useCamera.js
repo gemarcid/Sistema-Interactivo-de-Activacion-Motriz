@@ -15,7 +15,6 @@ const alignmentScore = ref(0) // 0 to 100%
 
 const bodyState = reactive({
   landmarks: null,
-  videoAspect: 0,
   points: [],
   segments: [],
   mapped: [],
@@ -104,7 +103,6 @@ export function useCamera() {
   function processVideoFrame(video, width, height, timestamp) {
     if (!detector || !video || video.readyState < 2) return
 
-    const isCursorVideo = video === sharedVideoEl || !sharedVideoEl?.isConnected
     try {
       // Enforce strictly monotonic increasing timestamp for MediaPipe PoseLandmarker
       let ts = typeof timestamp === 'number' && !isNaN(timestamp) && timestamp > 0 ? timestamp : performance.now()
@@ -123,14 +121,11 @@ export function useCamera() {
         bodyState.landmarks = null
         bodyState.points = []
         bodyState.segments = []
-        if (isCursorVideo) {
-          const { updateHandCursor } = useHandCursor()
-          updateHandCursor(null)
-        }
+        const { updateHandCursor } = useHandCursor()
+        updateHandCursor(null)
         return
       }
 
-      bodyState.videoAspect = video.videoHeight ? video.videoWidth / video.videoHeight : 0
       bodyState.landmarks = landmarks
       const interaction = buildBodyInteraction(landmarks, { width, height }, video)
       bodyState.points = interaction.points
@@ -140,11 +135,8 @@ export function useCamera() {
       bodyDetected.value = interaction.points.length >= 6
 
       // Update virtual hand cursor for motion control & dwell click
-      if (isCursorVideo) {
-        const { updateHandCursor } = useHandCursor()
-        const { left, top } = video.getBoundingClientRect()
-        updateHandCursor(interaction.mapped, left, top)
-      }
+      const { updateHandCursor } = useHandCursor()
+      updateHandCursor(landmarks, width, height, 0.016)
 
       // Key landmarks (MediaPipe Pose):
       // 0: nose, 11: left shoulder, 12: right shoulder, 23: left hip, 24: right hip, 27: left ankle, 28: right ankle
