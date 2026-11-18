@@ -1,10 +1,10 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
-import { initializePoseDetector } from '../services/poseDetector'
-import { BODY_CONNECTIONS } from '../effects/bodyConnections'
-import { getRainbowColor } from '../effects/rainbow'
-import { burst, clearParticles, drawParticles, updateParticles } from '../effects/particles'
-import { buildBodyInteraction, findBodyHit } from '../game/bodyCollision'
+import { initializePoseDetector } from '../../services/poseDetector'
+import { BODY_CONNECTIONS } from '../../effects/bodyConnections'
+import { getRainbowColor } from '../../effects/rainbow'
+import { burst, clearParticles, drawParticles, updateParticles } from '../../effects/particles'
+import { buildBodyInteraction, findBodyHit } from '../../game/bodyCollision'
 
 const videoRef = ref(null)
 const canvasRef = ref(null)

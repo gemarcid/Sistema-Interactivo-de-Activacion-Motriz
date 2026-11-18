@@ -1,25 +1,28 @@
 <script setup>
 import { ref } from 'vue'
 import { useProfiles } from './composables/useProfiles'
-import MotrizBackgroundCamera from './components/motriz/MotrizBackgroundCamera.vue'
-import MotrizHandCursor from './components/motriz/MotrizHandCursor.vue'
-import MotrizHeader from './components/motriz/MotrizHeader.vue'
-import MotrizHomeView from './components/motriz/MotrizHomeView.vue'
-import MotrizCalibrationView from './components/motriz/MotrizCalibrationView.vue'
-import MotrizTestingLabView from './components/motriz/MotrizTestingLabView.vue'
-import MotrizMoveRememberView from './components/motriz/MotrizMoveRememberView.vue'
-import MotrizInitialForm from './components/motriz/MotrizInitialForm.vue'
-import MotrizProfileModal from './components/motriz/MotrizProfileModal.vue'
-import MotrizProgressModal from './components/motriz/MotrizProgressModal.vue'
-import MotrizSettingsModal from './components/motriz/MotrizSettingsModal.vue'
-import MotrizHelpModal from './components/motriz/MotrizHelpModal.vue'
+import MotrizBackgroundCamera from './components/layout/MotrizBackgroundCamera.vue'
+import MotrizHandCursor from './components/layout/MotrizHandCursor.vue'
+import MotrizHeader from './components/layout/MotrizHeader.vue'
+import MotrizHomeView from './components/views/MotrizHomeView.vue'
+import MotrizCalibrationView from './components/views/MotrizCalibrationView.vue'
+import MotrizTestingLabView from './components/views/MotrizTestingLabView.vue'
+import MotrizMoveRememberView from './components/views/MotrizMoveRememberView.vue'
+import MotrizInitialForm from './components/forms/MotrizInitialForm.vue'
+import MotrizProfileModal from './components/modals/MotrizProfileModal.vue'
+import MotrizProgressModal from './components/modals/MotrizProgressModal.vue'
+import MotrizSettingsModal from './components/modals/MotrizSettingsModal.vue'
+import MotrizHelpModal from './components/modals/MotrizHelpModal.vue'
 
 const { isLeftHanded, isRightHanded, dominantHand } = useProfiles()
 
-const currentView = ref('home') 
+// Current active view
+const currentView = ref('home') // 'home' | 'calibration' | 'lab'
 
+// Pantalla inicial del formulario del paciente (se muestra al iniciar o al solicitarlo)
 const showInitialForm = ref(true)
 
+// Modals
 const showProfileModal = ref(false)
 const showProgressModal = ref(false)
 const showSettingsModal = ref(false)
@@ -54,8 +57,10 @@ function handleOpenOriginalCIF() {
   >
     <MotrizBackgroundCamera :show-startup="currentView !== 'move-remember'" />
 
+    <!-- 2. VIRTUAL HAND CURSOR (Tracks hand movement & performs dwell click; mouse also works natively) -->
     <MotrizHandCursor />
 
+    <!-- 3. TOP ASISTENCIA MOTRIZ HEADER -->
     <MotrizHeader
       v-if="currentView !== 'move-remember'"
       :show-back="currentView !== 'home'"
@@ -64,10 +69,12 @@ function handleOpenOriginalCIF() {
       @open-settings="showSettingsModal = true"
       @open-help="showHelpModal = true"
       @open-profiles="showProfileModal = true"
-      @open-abuelo-form="showInitialForm = true"
+      @open-patient-form="showInitialForm = true"
     />
 
+    <!-- 4. ACTIVE VIEW LAYER (Floating seamlessly over the fullscreen live camera) -->
     <main class="motriz-main-stage">
+      <!-- Main Menu (Screen 1 with Fullscreen Camera) -->
       <MotrizHomeView
         v-if="currentView === 'home'"
         @start-game="handleStartNewGame"
@@ -75,12 +82,14 @@ function handleOpenOriginalCIF() {
         @open-lab="handleOpenLab"
       />
 
+      <!-- Preparation & Calibration Screen (Screen 3 with Fullscreen Silhouette) -->
       <MotrizCalibrationView
         v-else-if="currentView === 'calibration'"
         @start-play="handleOpenLab"
         @exit="currentView = 'home'"
       />
 
+      <!-- Testing Lab: Preserves original UNACH CIF game + prototypes without deleting anything -->
       <MotrizTestingLabView
         v-else-if="currentView === 'lab'"
         @back="currentView = 'home'"
@@ -93,29 +102,34 @@ function handleOpenOriginalCIF() {
       />
     </main>
 
+    <!-- 5. PANTALLA INICIAL: FORMULARIO DEL PACIENTE (Con mano dominante y guardado en SQLite) -->
     <MotrizInitialForm
       v-if="showInitialForm"
       @complete="handleInitialFormComplete"
       @cancel="showInitialForm = false"
     />
 
-
+    <!-- 6. ASISTENCIA MOTRIZ MODALS -->
+    <!-- Profile creation & selection (RF4, RF5, RF7) -->
     <MotrizProfileModal
       v-if="showProfileModal"
       @close="showProfileModal = false"
     />
 
+    <!-- Progress & Activity Reports (RF3, RF9) -->
     <MotrizProgressModal
       v-if="showProgressModal"
       @close="showProgressModal = false"
     />
 
+    <!-- Settings (Sound, camera, Zero-retention privacy RNF6) -->
     <MotrizSettingsModal
       v-if="showSettingsModal"
       @close="showSettingsModal = false"
       @open-original-cif="handleOpenOriginalCIF"
     />
 
+    <!-- Help & Caregiver guidance -->
     <MotrizHelpModal
       v-if="showHelpModal"
       @close="showHelpModal = false"

@@ -222,3 +222,4 @@ GROUP BY
     r.resumen;
 
 COMMIT;
+

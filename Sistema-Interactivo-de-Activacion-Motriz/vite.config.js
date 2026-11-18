@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import { initDatabase } from './src/main/database/init.js';
-import patientController from './src/main/database/controllers/patientController.js';
+import { initDatabase } from './src/database/init.js';
+import patientController from './src/database/controllers/patientController.js';
 
 // Inicializar la base de datos SQLite con los esquemas de init.sql
 try {

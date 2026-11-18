@@ -1,10 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 import { playClickTone, playSelectTone } from '../../composables/useAudio'
-import BalloonGame from '../BalloonGame.vue'
+import BalloonGame from '../games/BalloonGame.vue'
 import MotrizGameView from './MotrizGameView.vue'
 import MotrizWalkTestView from './MotrizWalkTestView.vue'
-import MotrizMovementIcon from './MotrizMovementIcon.vue'
+import MotrizMovementIcon from '../games/MotrizMovementIcon.vue'
 import { movements } from '../../game/moveRemember/round'
 
 const emit = defineEmits(['back', 'open-move-remember'])
@@ -15,7 +15,7 @@ function openMoveRemember() {
   emit('open-move-remember')
 }
 
-const activeTab = ref('hub') // 'hub' | 'unach-cif' | 'alcanza-colores' | 'caminata lenta'
+const activeTab = ref('hub') // 'hub' | 'unach-cif' | 'alcanza-colores' | 'caminata-lenta'
 
 function handleSelect(tab) {
   playSelectTone()
@@ -90,10 +90,10 @@ function handleBack() {
         <!-- 2. Original UNACH CIF Game -->
         <div class="lab-card" @click="handleSelect('unach-cif')">
           <div class="card-pill-tag tag-ready">Listo para Probar</div>
-          <div class="card-icon">🎮</div>
-          <h3>Desafío UNACH CIF Original</h3>
+          <div class="card-icon">🎯</div>
+          <h3>Desafío UNACH CIF</h3>
           <p>
-            El juego de prueba original de detección corporal: revienta tecnologías (código, IA, cloud) y esquiva bugs.
+            Juego de detección corporal completa: estallido de objetivos de programación, IA y ciberseguridad.
           </p>
           <button type="button" class="btn-motriz-primary btn-launch">
             Abrir Desafío UNACH
@@ -104,28 +104,27 @@ function handleBack() {
         <div class="lab-card" @click="handleSelect('alcanza-colores')">
           <div class="card-pill-tag tag-ready">Listo para Probar</div>
           <div class="card-icon">🎈</div>
-          <h3>Prototipo Alcanza Colores</h3>
+          <h3>Alcanza Colores</h3>
           <p>
-            Esferas en tonos cálidos adaptadas a la visión del adulto mayor con feedback motivacional y multiplicador de combo.
-          </p>
-          <button type="button" class="btn-motriz-primary btn-launch">
-            Abrir Prototipo
-          </button>
-        </div>
-        
-        <!-- 4. Prototipo de Caminata Lenta -->
-        <div class="lab-card" @click="handleSelect('caminata-lenta')">
-          <div class="card-pill-tag tag-ready">Listo para Probar</div>
-          <div class="card-icon">🚶‍♂️</div>
-          <h3>Prueba de Caminata Lenta</h3>
-          <p>
-            Medición de rendimiento biomecánico en el lugar: intensidad, ángulos de articulaciones y centro de gravedad.
+            Esferas en tonos cálidos adaptadas a la visión del paciente con feedback motivacional y multiplicador.
           </p>
           <button type="button" class="btn-motriz-primary btn-launch">
             Abrir Prototipo
           </button>
         </div>
 
+        <!-- 4. Prototipo de Caminata Lenta -->
+        <div class="lab-card" @click="handleSelect('caminata-lenta')">
+          <div class="card-pill-tag tag-ready">Listo para Probar</div>
+          <div class="card-icon">🚶</div>
+          <h3>Prueba de Caminata Lenta</h3>
+          <p>
+            Medición de rendimiento biomecánico: intensidad de pasos, ángulos de rodillas/caderas y centro de gravedad.
+          </p>
+          <button type="button" class="btn-motriz-primary btn-launch">
+            Abrir Prototipo
+          </button>
+        </div>
       </div>
 
       <div class="lab-footer">
@@ -147,7 +146,7 @@ function handleBack() {
 }
 
 .lab-hub-content {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 30px 24px 40px;
   display: flex;
@@ -178,7 +177,7 @@ function handleBack() {
 
 .lab-cards-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 24px;
   width: 100%;
   margin-bottom: 36px;
@@ -224,13 +223,13 @@ function handleBack() {
 }
 
 .card-icon {
-  font-size: 3rem;
+  font-size: 2.8rem;
   margin-bottom: 12px;
 }
 
 .lab-card h3 {
   margin: 0 0 10px;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--motriz-red-primary);
 }

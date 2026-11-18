@@ -6,7 +6,7 @@ import { useHandCursor } from '../../composables/useHandCursor'
 import { useProfiles } from '../../composables/useProfiles'
 import { createPoseTracker, measurePose, recognizePose } from '../../game/moveRemember/poseRecognition'
 import { generateSequence, movements, ROUND_LENGTH, scoreRound } from '../../game/moveRemember/round'
-import MotrizMovementIcon from './MotrizMovementIcon.vue'
+import MotrizMovementIcon from '../games/MotrizMovementIcon.vue'
 
 defineEmits(['exit'])
 

@@ -307,7 +307,7 @@ export function useProfiles() {
     const normalizedHand = (mano_dominante || 'DERECHA').toUpperCase() === 'IZQUIERDA' ? 'IZQUIERDA' : 'DERECHA'
     const newProfile = {
       id: `prof-${Date.now()}`,
-      name: name.trim() || 'Abuelo',
+      name: name.trim() || 'Paciente',
       age: Number(age) || 70,
       heightCm: Number(heightCm) || 160,
       mano_dominante: normalizedHand,

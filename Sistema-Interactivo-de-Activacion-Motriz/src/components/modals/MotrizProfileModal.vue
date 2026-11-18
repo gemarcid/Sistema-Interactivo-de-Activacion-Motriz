@@ -15,7 +15,7 @@ const newManoDominante = ref('DERECHA')
 const newDifficulty = ref('facil')
 const newAvatar = ref('👴')
 
-const avatarOptions = ['👵', '👴', '👩', '👨', '🧑', '🌸', '🌿']
+const avatarOptions = ['👴', '👵', '🧑', '🌸', '🌿', '☕', '⭐']
 
 function handleSelect(id) {
   playSelectTone()
@@ -52,7 +52,7 @@ function handleClose() {
     >
       <div class="modal-top">
         <h2 class="profile-modal-title">
-          {{ isCreating ? 'Crear Nuevo Perfil' : 'Perfiles de Jugador' }}
+          {{ isCreating ? 'Crear Nuevo Perfil' : 'Perfiles de Paciente' }}
         </h2>
         <button type="button" class="close-x-btn" @click="handleClose">✕</button>
       </div>
@@ -60,11 +60,11 @@ function handleClose() {
       <!-- Create Form -->
       <div v-if="isCreating" class="create-profile-form">
         <div class="form-group">
-          <label class="form-label">Nombre del Abuelo / Paciente</label>
+          <label class="form-label">Nombre del Paciente</label>
           <input
             v-model="newName"
             type="text"
-            placeholder="Ej. Abuelito Hernán"
+            placeholder="Ej. Carlos Mendoza"
             class="motriz-input"
             autofocus
           />
@@ -106,7 +106,7 @@ function handleClose() {
               :class="{ 'hand-pill-active': newManoDominante === 'IZQUIERDA' }"
               @click="newManoDominante = 'IZQUIERDA'"
             >
-              👈 Mano Izquierda (Zurdo)
+              Mano Izquierda (Zurdo)
             </button>
             <button
               type="button"
@@ -114,7 +114,7 @@ function handleClose() {
               :class="{ 'hand-pill-active': newManoDominante === 'DERECHA' }"
               @click="newManoDominante = 'DERECHA'"
             >
-              👉 Mano Derecha (Diestro)
+              Mano Derecha (Diestro)
             </button>
           </div>
         </div>
@@ -201,12 +201,12 @@ function handleClose() {
             :class="{ 'profile-item-active': activeProfile?.id === p.id }"
             @click="handleSelect(p.id)"
           >
-            <span class="p-avatar">{{ p.avatar || '👴' }}</span>
+            <span class="p-avatar">{{ p.avatar || '👤' }}</span>
             <div class="p-details">
               <strong class="p-name">{{ p.name }}</strong>
               <span class="p-meta">{{ p.age }} años • {{ p.heightCm }} cm</span>
               <span class="p-hand-tag">
-                Mano: <strong>{{ p.mano_dominante === 'IZQUIERDA' ? 'Izquierda 👈' : 'Derecha 👉' }}</strong>
+                Mano: <strong>{{ p.mano_dominante === 'IZQUIERDA' ? 'Izquierda' : 'Derecha' }}</strong>
               </span>
               <span class="p-diff">Movilidad: {{ p.difficulty }}</span>
             </div>
@@ -255,7 +255,7 @@ function handleClose() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .profile-modal-title {
@@ -275,23 +275,26 @@ function handleClose() {
   font-weight: 800;
   color: var(--motriz-text-muted);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.15s;
 }
 
 .close-x-btn:hover {
-  background: #8C1D2C;
-  color: #FFF;
-}
-
-.section-desc {
-  margin: 0 0 20px;
-  color: var(--motriz-text-muted);
-  font-size: 0.95rem;
+  background: #E5D5C5;
+  transform: scale(1.08);
 }
 
 .create-profile-form {
   display: flex;
   flex-direction: column;
+  gap: 18px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
@@ -307,197 +310,216 @@ function handleClose() {
   color: var(--motriz-text-main);
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
 .input-hint {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   color: var(--motriz-text-muted);
+  font-style: italic;
 }
 
 .hand-options {
-  display: flex;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .hand-pill {
-  flex: 1;
   padding: 12px 14px;
-  font-size: 0.95rem;
-  font-weight: 800;
+  border-radius: 9999px;
+  border: 2px solid var(--motriz-card-border);
   background: #FFFDF9;
-  border: 2px solid #D5C2B1;
-  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.88rem;
+  color: var(--motriz-text-main);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
+}
+
+.hand-pill:hover {
+  border-color: var(--motriz-red-primary);
+  background: #FDF4E9;
 }
 
 .hand-pill-active {
-  background: #8C1D2C !important;
-  color: #FFF !important;
-  border-color: #8C1D2C !important;
+  border-color: var(--motriz-red-primary);
+  background: var(--motriz-red-primary);
+  color: #FFF;
+  box-shadow: 0 4px 12px rgba(140, 29, 44, 0.25);
 }
 
 .difficulty-options {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 
 .diff-pill {
-  flex: 1;
-  padding: 10px;
-  font-size: 0.88rem;
+  padding: 10px 8px;
+  border-radius: 9999px;
+  border: 2px solid var(--motriz-card-border);
+  background: #FFFDF9;
   font-weight: 700;
-  background: #FFFFFF;
-  border: 2px solid #E2D2C1;
-  border-radius: 12px;
+  font-size: 0.82rem;
+  color: var(--motriz-text-muted);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
+}
+
+.diff-pill:hover {
+  border-color: var(--motriz-red-primary);
 }
 
 .diff-active {
-  background: #8C1D2C;
-  color: #FFFFFF;
-  border-color: #8C1D2C;
+  border-color: var(--motriz-red-primary);
+  background: var(--motriz-red-soft);
+  color: var(--motriz-red-primary);
+  font-weight: 800;
 }
 
 .avatar-selector {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .avatar-opt-btn {
-  width: 46px;
-  height: 46px;
   font-size: 1.6rem;
-  background: #FFFFFF;
-  border: 2px solid #E2D2C1;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--motriz-card-border);
+  background: #FFFDF9;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
+}
+
+.avatar-opt-btn:hover {
+  transform: scale(1.1);
+  border-color: var(--motriz-red-primary);
 }
 
 .avatar-opt-active {
   border-color: var(--motriz-red-primary);
-  background: #FFF0F2;
-  transform: scale(1.08);
+  background: var(--motriz-red-soft);
+  transform: scale(1.12);
 }
 
-/* Actions adaptadas por mano dominante */
 .form-actions {
   display: flex;
   gap: 14px;
-  margin-top: 14px;
-  transition: all 0.3s ease;
+  margin-top: 10px;
 }
 
 .actions-align-left {
   justify-content: flex-start;
-  flex-direction: row;
+  flex-direction: row-reverse;
 }
 
 .actions-align-right {
   justify-content: flex-end;
-  flex-direction: row-reverse;
+  flex-direction: row;
 }
 
 .form-btn {
-  padding: 14px 28px;
-  font-size: 1.05rem;
+  padding: 12px 24px;
+  font-size: 1rem;
 }
 
-/* Profiles Grid */
+.section-desc {
+  font-size: 0.95rem;
+  color: var(--motriz-text-muted);
+  margin: 0 0 18px;
+}
+
 .profiles-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  max-height: 340px;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  max-height: 380px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 4px;
+  margin-bottom: 24px;
 }
 
 .profile-item-card {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   padding: 14px 18px;
-  background: #FFFFFF;
-  border: 2px solid #E2D2C1;
-  border-radius: 16px;
+  background: #FFFDF9;
+  border: 2px solid var(--motriz-card-border);
+  border-radius: 20px;
   cursor: pointer;
-  transition: all 0.18s;
   position: relative;
+  transition: all 0.2s ease;
 }
 
 .profile-item-card:hover {
   border-color: var(--motriz-red-primary);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(140, 29, 44, 0.12);
+  box-shadow: 0 6px 18px rgba(140, 29, 44, 0.12);
 }
 
 .profile-item-active {
   border-color: var(--motriz-red-primary);
-  background: #FFF7F8;
+  background: #FEF6F0;
+  border-width: 2.5px;
 }
 
 .p-avatar {
   font-size: 2.2rem;
+  flex-shrink: 0;
 }
 
 .p-details {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  text-align: left;
 }
 
 .p-name {
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 900;
   color: var(--motriz-text-main);
 }
 
 .p-meta {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--motriz-text-muted);
+  font-weight: 600;
 }
 
 .p-hand-tag {
-  font-size: 0.85rem;
+  font-size: 0.76rem;
   color: #8C1D2C;
+  font-weight: 700;
 }
 
 .p-diff {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: var(--motriz-text-muted);
   text-transform: capitalize;
 }
 
 .p-badge-active {
-  margin-left: auto;
+  position: absolute;
+  top: 8px;
+  right: 12px;
   background: var(--motriz-red-primary);
-  color: #FFFFFF;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 0.8rem;
+  color: #FFF;
+  font-size: 0.68rem;
   font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  letter-spacing: 0.05em;
 }
 
 .profiles-list-actions {
   display: flex;
-  margin-top: 20px;
 }
 
 .btn-add-p {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 26px;
+  padding: 14px 28px;
   font-size: 1.05rem;
 }
 </style>

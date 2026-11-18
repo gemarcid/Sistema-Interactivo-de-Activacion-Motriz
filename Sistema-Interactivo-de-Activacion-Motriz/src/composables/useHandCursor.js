@@ -46,7 +46,6 @@ export function useHandCursor() {
       deactivateCursor()
       return
     }
-
     // MediaPipe Pose Landmarks:
     // 15: left_wrist, 16: right_wrist, 19: left_index, 20: right_index
     // Seguir ESTRICTAMENTE únicamente la mano dominante configurada (sin cambiar a la otra mano)
