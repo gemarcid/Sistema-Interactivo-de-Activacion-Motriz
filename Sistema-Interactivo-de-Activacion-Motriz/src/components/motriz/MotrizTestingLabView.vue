@@ -4,8 +4,16 @@ import { playClickTone, playSelectTone } from '../../composables/useAudio'
 import BalloonGame from '../BalloonGame.vue'
 import MotrizGameView from './MotrizGameView.vue'
 import MotrizWalkTestView from './MotrizWalkTestView.vue'
+import MotrizMovementIcon from './MotrizMovementIcon.vue'
+import { movements } from '../../game/moveRemember/round'
 
-const emit = defineEmits(['back'])
+const emit = defineEmits(['back', 'open-move-remember'])
+const memoryIcon = movements.find(({ id }) => id === 'both-arms-up')
+
+function openMoveRemember() {
+  playSelectTone()
+  emit('open-move-remember')
+}
 
 const activeTab = ref('hub') // 'hub' | 'unach-cif' | 'alcanza-colores' | 'caminata lenta'
 
@@ -64,24 +72,19 @@ function handleBack() {
       <div class="lab-header">
         <h1 class="lab-title">Zona de Pruebas y Prototipos</h1>
         <p class="lab-subtitle">
-          Aquí se conservan intactos los juegos de prueba mientras diseñas el sistema de minijuegos rápidos inspirado en Pureya (cambio cada 5 segundos) y Motriz.
+          Selecciona una actividad para practicar movimientos, memoria y coordinación.
         </p>
       </div>
 
       <div class="lab-cards-grid">
-        <!-- 1. Pureya Concept Card -->
-        <div class="lab-card pureya-concept-card">
-          <div class="card-pill-tag">En Diseño</div>
-          <div class="card-icon">⚡</div>
-          <h3>Modo Pureya + Motriz</h3>
-          <p>
-            Minijuegos ultrarrápidos que cambian cada 5 segundos: recolectar esferas, esquivar, sostener postura y ritmo sin pausas largas.
-          </p>
-          <div class="concept-features">
-            <span>⏱ Cambio cada 5s</span>
-            <span>🖐 Control con mano</span>
-            <span>🪙 Recompensas arcade</span>
-          </div>
+        <div class="lab-card" @click="openMoveRemember">
+          <div class="card-pill-tag tag-ready">Listo para jugar</div>
+          <MotrizMovementIcon :arms="memoryIcon.arms" class="card-icon memory-icon" />
+          <h3>Mueve y Recuerda</h3>
+          <p>Memoriza cuatro posturas y reprodúcelas en orden con tu cuerpo frente a la cámara.</p>
+          <button type="button" class="btn-motriz-primary btn-launch">
+            Abrir Mueve y Recuerda
+          </button>
         </div>
 
         <!-- 2. Original UNACH CIF Game -->
@@ -246,25 +249,10 @@ function handleBack() {
   font-size: 1.05rem;
 }
 
-.pureya-concept-card {
-  border: 3px dashed #E5A323;
-  background: rgba(255, 251, 240, 0.95);
-  cursor: default;
-}
-
-.pureya-concept-card:hover {
-  transform: none;
-  border-color: #E5A323;
-}
-
-.concept-features {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #B45309;
+.memory-icon {
+  width: 54px;
+  height: 54px;
+  color: var(--motriz-red-primary);
 }
 
 .lab-footer {
