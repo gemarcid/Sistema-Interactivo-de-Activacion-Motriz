@@ -17,6 +17,7 @@ export const handCursorState = reactive({
 let currentHoverElement = null
 let dwellTimer = 0
 let enabled = true
+let cursorArea = null
 const DWELL_DURATION = 0.32 // Reducido a la mitad para una activación ultra rápida y fluida
 
 export function useHandCursor() {
@@ -29,6 +30,7 @@ export function useHandCursor() {
     handCursorState.isHovering = false
     handCursorState.dwellProgress = 0
     currentHoverElement = null
+    dwellTimer = 0
   }
 
   function pickVisibleLandmark(indexLm, wristLm) {
@@ -59,10 +61,19 @@ export function useHandCursor() {
       return
     }
 
-    handCursorState.active = true
-
     handCursorState.x = videoLeft + chosenHand.x
     handCursorState.y = videoTop + chosenHand.y
+
+    if (cursorArea) {
+      const bounds = cursorArea.getBoundingClientRect()
+      if (handCursorState.x < bounds.left || handCursorState.x > bounds.right
+        || handCursorState.y < bounds.top || handCursorState.y > bounds.bottom) {
+        deactivateCursor()
+        return
+      }
+    }
+
+    handCursorState.active = true
     processHoverAndDwell(handCursorState.x, handCursorState.y, 0.016)
   }
 
@@ -138,9 +149,15 @@ export function useHandCursor() {
     if (!enabled) deactivateCursor()
   }
 
+  function setHandCursorArea(element) {
+    cursorArea = element
+    deactivateCursor()
+  }
+
   return {
     handCursorState,
     updateHandCursor,
     setHandCursorEnabled,
+    setHandCursorArea,
   }
 }

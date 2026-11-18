@@ -21,6 +21,10 @@ const props = defineProps({
     type: String,
     default: 'Comenzar',
   },
+  startStatus: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits(['start-play', 'exit'])
@@ -404,6 +408,8 @@ function handleExit() {
               <span>{{ buttonText }}</span>
             </button>
           </div>
+
+          <p v-if="startStatus" class="advice-lead" role="status">{{ startStatus }}</p>
 
           <p class="advice-lead">
             {{ leadText || ('Colócate en el centro • Botón accesible para mano ' + (isLeftHanded ? 'izquierda' : 'derecha')) }}

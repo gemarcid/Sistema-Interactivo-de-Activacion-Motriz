@@ -14,11 +14,13 @@ defineEmits(['exit', 'finish'])
 const MEMORY_TIME_MS = 12000
 const movementById = new Map(movements.map((movement) => [movement.id, movement]))
 const { stream, bodyState, cameraError, isLoadingDetector, initCamera } = useCamera()
-const { setHandCursorEnabled } = useHandCursor()
+const { setHandCursorEnabled, setHandCursorArea } = useHandCursor()
 const { isLeftHanded } = useProfiles()
 
 const phase = ref('ready')
 const phaseHeading = ref(null)
+const sidebarRef = ref(null)
+const calibrationRef = ref(null)
 const tracked = ref(false)
 const paused = ref(false)
 const sequence = ref([])
@@ -39,12 +41,15 @@ const playing = computed(() => phase.value === 'memorize' || phase.value === 'ex
 const result = computed(() => scoreRound(sequence.value.length, completed.value, orderErrors.value, hintsUsed.value))
 
 onMounted(() => {
+  setHandCursorEnabled(true)
   phaseHeading.value?.focus()
   trackingTimer = setInterval(() => {
     if (performance.now() - lastPoseAt > 400 || !hasCameraFeed()) loseTracking()
   }, 100)
 })
-watch(() => playing.value && !paused.value, (active) => setHandCursorEnabled(!active), { flush: 'sync' })
+watch([sidebarRef, calibrationRef], ([sidebar, calibration]) => {
+  setHandCursorArea(sidebar || calibration?.$el.querySelector('.prep-dock-card') || null)
+}, { flush: 'post' })
 watch([phase, paused], () => phaseHeading.value?.focus({ preventScroll: true }), { flush: 'post' })
 watch(() => bodyState.landmarks, (landmarks) => {
   const pose = hasCameraFeed() && measurePose(landmarks, bodyState.videoAspect)
@@ -76,6 +81,7 @@ watch(() => bodyState.landmarks, (landmarks) => {
 onBeforeUnmount(() => {
   stopMemoryTimer()
   clearInterval(trackingTimer)
+  setHandCursorArea(null)
   setHandCursorEnabled(true)
 })
 
@@ -89,8 +95,6 @@ function loseTracking() {
 }
 
 function startRound(repeat = false) {
-  if (!tracked.value) return
-
   playSelectTone()
   if (!repeat) sequence.value = generateSequence()
   completed.value = 0
@@ -156,19 +160,57 @@ function finishRound() {
   <!-- FASE 1: Calibración previa solo desde la cintura para arriba -->
   <MotrizCalibrationView
     v-if="phase === 'ready'"
+    ref="calibrationRef"
     mode="upper-body"
     title="Mueve y Recuerda"
     lead-text="Calibración de cintura para arriba • Prepara tus brazos y hombros"
     button-text="COMENZAR JUEGO"
+    :start-status="tracked
+      ? 'Brazos detectados. Puedes comenzar.'
+      : (cameraError || (isLoadingDetector ? 'Cargando cámara y detector…' : 'Puedes comenzar. Durante las posturas, muestra ambos brazos y la cintura dentro de la cámara.'))"
     @start-play="startRound()"
     @exit="$emit('exit')"
   />
 
-  <section v-else class="memory-view" :class="{ 'sidebar-left': isLeftHanded }" aria-labelledby="memory-title">
-    <div class="motriz-card memory-sidebar">
+  <section
+    v-else
+    class="memory-view"
+    :class="{ 'sidebar-left': isLeftHanded, 'sequence-view': phase === 'memorize' && !paused }"
+    aria-labelledby="memory-title"
+  >
+    <div
+      ref="sidebarRef"
+      class="motriz-card memory-sidebar"
+      :class="{ 'sequence-panel': phase === 'memorize' && !paused, 'execution-panel': phase === 'execute' && !paused }"
+    >
       <header class="memory-hud">
         <h1 id="memory-title">Mueve y Recuerda</h1>
         <div class="memory-actions">
+          <template v-if="paused">
+            <button type="button" class="btn-motriz-primary" @click="togglePause">Continuar</button>
+            <button type="button" class="btn-motriz-secondary" @click="finishRound">Terminar ronda</button>
+          </template>
+          <button
+            v-else-if="phase === 'memorize'"
+            type="button"
+            class="btn-motriz-primary"
+            @click="startExecution"
+          >
+            ¡Ya memoricé! Empezar
+          </button>
+          <button
+            v-else-if="phase === 'execute' && !hint"
+            type="button"
+            class="btn-motriz-secondary"
+            @click="revealHint"
+          >
+            Ver pista
+          </button>
+          <template v-else-if="phase === 'results'">
+            <button type="button" class="btn-motriz-primary" @click="$emit('finish')">FINALIZAR SESIÓN</button>
+            <button type="button" class="btn-motriz-secondary" :disabled="!tracked" @click="startRound()">Nueva secuencia</button>
+            <button type="button" class="btn-motriz-secondary" :disabled="!tracked" @click="startRound(true)">Repetir</button>
+          </template>
           <button
             v-if="playing && !paused"
             type="button"
@@ -183,19 +225,10 @@ function finishRound() {
 
       <div v-if="paused" class="memory-panel">
         <h2 ref="phaseHeading" tabindex="-1">Pausa</h2>
-        <div class="memory-actions-top">
-          <button type="button" class="btn-motriz-primary" @click="togglePause">Continuar</button>
-          <button type="button" class="btn-motriz-secondary" @click="finishRound">Terminar ronda</button>
-        </div>
       </div>
 
       <div v-else-if="phase === 'memorize'" class="memory-panel">
         <h2 ref="phaseHeading" tabindex="-1">Memoriza el orden</h2>
-
-        <!-- BOTÓN ARRIBA PARA NO AGACHARSE -->
-        <div class="memory-actions-top">
-          <button type="button" class="btn-motriz-primary" @click="startExecution">¡Ya memoricé! Empezar</button>
-        </div>
 
         <p role="timer">Tiempo restante: <strong>{{ secondsLeft }} s</strong></p>
         <ol class="sequence-grid">
@@ -210,40 +243,17 @@ function finishRound() {
       <div v-else-if="phase === 'execute'" class="memory-panel">
         <h2 ref="phaseHeading" tabindex="-1" aria-live="polite">Postura {{ completed + 1 }} de {{ ROUND_LENGTH }}</h2>
 
-        <!-- PISTA ARRIBA -->
-        <div v-if="!hint" class="memory-actions-top">
-          <button type="button" class="btn-motriz-secondary" @click="revealHint">Ver pista</button>
-        </div>
-
         <p role="status">
           <template v-if="!tracked">Seguimiento en pausa. Vuelve al centro de la cámara.</template>
           <template v-else-if="retry">Inténtalo de nuevo. Mantén la postura hasta que avance el contador.</template>
           <template v-else>Mantén la postura hasta que avance el contador.</template>
         </p>
-        <div v-if="hint" class="hint" role="status">
-          <MotrizMovementIcon :arms="hint.arms" />
-          <strong>{{ hint.label }}</strong>
-        </div>
       </div>
 
       <div v-else class="memory-panel">
         <h2 ref="phaseHeading" tabindex="-1">
           {{ result.perfect ? '¡Secuencia completada!' : 'Resultados de la ronda' }}
         </h2>
-
-        <!-- ACCIONES PRINCIPALES ARRIBA DEL TEXTO -->
-        <div class="memory-actions-top">
-          <button type="button" class="btn-motriz-primary btn-session-finish" @click="$emit('finish')">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
-            </svg>
-            <span>FINALIZAR SESIÓN</span>
-          </button>
-          <div class="memory-actions-sub">
-            <button type="button" class="btn-motriz-secondary btn-sm" :disabled="!tracked" @click="startRound()">Nueva secuencia</button>
-            <button type="button" class="btn-motriz-secondary btn-sm" :disabled="!tracked" @click="startRound(true)">Repetir</button>
-          </div>
-        </div>
 
         <dl class="result-grid">
           <div><dt>Posturas completadas</dt><dd>{{ result.correct }} / {{ ROUND_LENGTH }}</dd></div>
@@ -254,15 +264,22 @@ function finishRound() {
         <p v-if="!tracked" role="status">Vuelve al centro de la cámara para jugar otra ronda.</p>
       </div>
     </div>
+    <aside v-if="phase === 'execute' && hint && !paused" class="motriz-card hint-card" role="status" aria-label="Pista">
+      <span>Pista</span>
+      <MotrizMovementIcon :arms="hint.arms" />
+      <strong>{{ hint.label }}</strong>
+    </aside>
   </section>
 </template>
 
 <style scoped>
 .memory-view {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
   justify-content: flex-end;
+  align-items: center;
   padding: clamp(8px, 2vw, 24px);
 }
 
@@ -309,40 +326,14 @@ function finishRound() {
   font-size: clamp(1rem, 2.2vw, 1.2rem);
 }
 
-.memory-actions-top {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 12px 0 10px;
-}
-
-.memory-actions-sub {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-session-finish {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 12px 18px;
-  font-weight: 900;
-  border-radius: 9999px;
-  box-shadow: 0 6px 20px rgba(140, 29, 44, 0.35);
-}
-
 .memory-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.memory-panel .memory-actions {
-  flex-direction: column;
-  flex-wrap: nowrap;
-  margin-top: auto;
-  padding-top: 16px;
+.memory-actions > .btn-motriz-primary {
+  grid-column: 1 / -1;
 }
 
 .memory-actions button {
@@ -389,8 +380,7 @@ function finishRound() {
   text-align: center;
 }
 
-.pose-tile svg,
-.hint svg {
+.pose-tile svg {
   width: clamp(42px, 8vw, 68px);
   height: clamp(38px, 7vh, 62px);
   color: var(--motriz-red-primary);
@@ -407,14 +397,41 @@ function finishRound() {
   font-weight: 800;
 }
 
-.hint {
+.hint-card {
+  position: absolute;
+  top: 8px;
+  left: 8px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  border-radius: 12px;
+  gap: 6px;
+  width: min(200px, 36%);
+  padding: 12px;
+  text-align: center;
   background: var(--motriz-gold-light);
+}
+
+.sidebar-left .hint-card {
+  left: auto;
+  right: 8px;
+}
+
+.hint-card svg {
+  width: clamp(44px, 7vw, 72px);
+  height: clamp(48px, 10vh, 80px);
+  color: var(--motriz-red-primary);
+}
+
+.execution-panel .memory-hud h1 {
+  font-size: 1.25rem;
+}
+
+.memory-sidebar.execution-panel {
+  align-self: flex-start;
+}
+
+.execution-panel .memory-panel h2 {
+  font-size: 1.5rem;
 }
 
 .result-grid {
@@ -500,8 +517,7 @@ function finishRound() {
     padding: 3px 6px;
   }
 
-  .pose-tile svg,
-  .hint svg {
+  .pose-tile svg {
     width: 34px;
     height: 36px;
   }
@@ -554,12 +570,6 @@ function finishRound() {
     width: clamp(310px, 44vw, 380px);
   }
 
-  .memory-hud {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
   .memory-hud h1 {
     font-size: 1rem;
   }
@@ -571,6 +581,104 @@ function finishRound() {
 
   .memory-hud button {
     padding-inline: 8px;
+  }
+}
+
+.memory-view.sequence-view {
+  justify-content: center;
+  align-items: center;
+}
+
+.memory-sidebar.sequence-panel {
+  width: min(100%, 1100px);
+  text-align: center;
+}
+
+.sequence-panel .memory-hud {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.sequence-panel .memory-actions {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.sequence-panel .memory-actions > .btn-motriz-primary {
+  grid-column: auto;
+}
+
+.sequence-panel .sequence-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.sequence-panel .pose-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(4px, 1vw, 12px);
+  text-align: center;
+  font-size: clamp(0.8rem, 1.8vw, 1.25rem);
+  line-height: 1.2;
+}
+
+.sequence-panel .pose-tile svg {
+  width: clamp(30px, 7vw, 84px);
+  height: clamp(34px, 12vh, 92px);
+  flex-shrink: 0;
+}
+
+.sequence-panel .memory-actions button {
+  min-height: 44px;
+  padding: 8px 20px;
+  font-size: clamp(1rem, 2.5vw, 1.3rem);
+}
+
+@media (max-height: 500px) {
+  .sequence-panel .memory-panel {
+    padding-top: 6px;
+  }
+
+  .sequence-panel .memory-panel h2 {
+    font-size: 1.15rem;
+  }
+
+  .sequence-panel .memory-actions button {
+    padding: 4px 10px;
+    font-size: 1rem;
+  }
+
+  .sequence-panel .pose-tile {
+    gap: 2px;
+    padding: 3px;
+  }
+
+  .sequence-panel .pose-tile svg {
+    height: 28px;
+    width: 26px;
+  }
+}
+
+@media (max-width: 700px) {
+  .sequence-panel .memory-hud {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 550px) and (max-height: 500px) {
+  .sequence-panel .memory-hud {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .sequence-panel .memory-hud h1 {
+    font-size: 1rem;
+  }
+
+  .sequence-panel .memory-actions button {
+    padding-inline: 8px;
+    font-size: 0.95rem;
   }
 }
 </style>

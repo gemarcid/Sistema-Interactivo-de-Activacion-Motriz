@@ -7,9 +7,9 @@ function sqliteApiPlugin() {
     async configureServer(server) {
       let patientController = null;
       try {
-        const initMod = await import('./src/main/database/init.js');
+        const initMod = await import('./src/database/init.js');
         if (initMod.initDatabase) initMod.initDatabase();
-        const ctrlMod = await import('./src/main/database/controllers/patientController.js');
+        const ctrlMod = await import('./src/database/controllers/patientController.js');
         patientController = ctrlMod.default || ctrlMod;
       } catch (e) {
         console.warn('Advertencia al inicializar SQLite en Vite:', e.message);
