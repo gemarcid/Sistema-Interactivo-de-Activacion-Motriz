@@ -1,5 +1,5 @@
-import { initDatabase } from './src/main/database/init.js';
-import patientController from './src/main/database/controllers/patientController.js';
+import { initDatabase } from './src/database/init.js';
+import patientController from './src/database/controllers/patientController.js';
 
 const shouldSeed = process.argv.includes('--seed');
 
@@ -10,9 +10,9 @@ initDatabase();
 setTimeout(async () => {
     try {
         if (shouldSeed) {
-            console.log('\n🌱 Insertando perfiles de ejemplo (--seed)...');
+            console.log('\nInsertando perfiles de ejemplo (--seed)...');
             await patientController.crearPerfil(null, {
-                nombre: 'Don Alberto',
+                nombre: 'Alberto Morales',
                 edad: 78,
                 estatura_cm: 168,
                 mano_dominante: 'IZQUIERDA',
@@ -20,7 +20,7 @@ setTimeout(async () => {
                 avatar: '👴'
             });
             await patientController.crearPerfil(null, {
-                nombre: 'Doña Rosa',
+                nombre: 'Rosa Valenzuela',
                 edad: 74,
                 estatura_cm: 158,
                 mano_dominante: 'DERECHA',
@@ -29,19 +29,19 @@ setTimeout(async () => {
             });
         }
 
-        console.log('\n PERFILES REGISTRADOS EN SQLite (JOIN usuario + perfil):');
+        console.log('\nPERFILES REGISTRADOS EN SQLite (JOIN usuario + perfil):');
         const perfiles = await patientController.obtenerPerfiles();
 
         if (perfiles.length === 0) {
-            console.log(' No hay perfiles registrados todavía.');
+            console.log('No hay perfiles registrados todavía.');
         } else {
             console.table(perfiles);
         }
 
-        console.log('\n Tip: Ejecuta "node test-db.js --seed" si deseas insertar perfiles de prueba.');
+        console.log('\nTip: Ejecuta "node test-db.js --seed" si deseas insertar perfiles de prueba.');
         process.exit(0);
     } catch (err) {
-        console.error('\n ERROR:', err);
+        console.error('\nERROR:', err);
         process.exit(1);
     }
 }, 800);

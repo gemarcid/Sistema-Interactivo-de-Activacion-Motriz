@@ -52,7 +52,7 @@ function selectExistingProfile(p) {
 
 async function handleSubmit() {
   if (!nombre.value.trim()) {
-    errorMessage.value = 'Por favor, ingresa el nombre o apodo del abuelo.'
+    errorMessage.value = 'Por favor, ingresa el nombre del paciente.'
     return
   }
 
@@ -77,7 +77,7 @@ async function handleSubmit() {
       emit('complete', nuevoPerfil)
     }, 600)
   } catch (err) {
-    console.error('Error al guardar datos del abuelo:', err)
+    console.error('Error al guardar datos del paciente:', err)
     errorMessage.value = 'Ocurrió un error al guardar en la base de datos.'
   } finally {
     isSaving.value = false
@@ -94,10 +94,9 @@ async function handleSubmit() {
       <!-- Cabecera de Bienvenida -->
       <header class="form-header">
         <div class="header-badge">
-          <span class="badge-icon">🌿</span>
           <span class="badge-text">SISTEMA INTERACTIVO DE ACTIVACIÓN MOTRIZ</span>
         </div>
-        <h1 class="header-title">Información del Abuelo / Paciente</h1>
+        <h1 class="header-title">Información del Paciente</h1>
         <p class="header-subtitle">
           Configuración inicial para adaptar la experiencia y posición de los botones a su ergonomía.
         </p>
@@ -110,17 +109,17 @@ async function handleSubmit() {
         </div>
       </header>
 
-      <!-- Selector de Abuelos Existentes (si ya hay registrados en SQLite) -->
+      <!-- Selector de Pacientes Existentes (si ya hay registrados en SQLite) -->
       <div v-if="profiles.length > 0 && !showExistingProfiles" class="quick-switch-bar">
         <span>¿Ya está registrado?</span>
         <button type="button" class="btn-link" @click="showExistingProfiles = true">
-          Elegir un abuelo registrado ({{ profiles.length }})
+          Seleccionar paciente registrado ({{ profiles.length }})
         </button>
       </div>
 
       <div v-if="showExistingProfiles" class="existing-profiles-drawer">
         <div class="drawer-header">
-          <strong>Selecciona un abuelo existente:</strong>
+          <strong>Selecciona un paciente registrado:</strong>
           <button type="button" class="btn-close-drawer" @click="showExistingProfiles = false">✕ Cerrar</button>
         </div>
         <div class="existing-grid">
@@ -135,7 +134,7 @@ async function handleSubmit() {
             <span class="p-emoji">{{ p.avatar }}</span>
             <div class="p-info">
               <strong class="p-name">{{ p.name }}</strong>
-              <span class="p-meta">{{ p.age }} años • Mano {{ p.mano_dominante === 'IZQUIERDA' ? 'Izquierda 👈' : 'Derecha 👉' }}</span>
+              <span class="p-meta">{{ p.age }} años • Mano {{ p.mano_dominante === 'IZQUIERDA' ? 'Izquierda' : 'Derecha' }}</span>
             </div>
           </button>
         </div>
@@ -145,16 +144,16 @@ async function handleSubmit() {
       <form class="main-form" @submit.prevent="handleSubmit">
         <!-- 1. Nombre -->
         <div class="form-field">
-          <label class="field-label" for="nombre-abuelo">
-            <span>Nombre o Apodo del Abuelo:</span>
+          <label class="field-label" for="nombre-paciente">
+            <span>Nombre del Paciente:</span>
             <span class="required-star">*</span>
           </label>
           <input
-            id="nombre-abuelo"
+            id="nombre-paciente"
             v-model="nombre"
             type="text"
             class="motriz-input input-large"
-            placeholder="Ej. Don Alberto, Abuelita Rosa"
+            placeholder="Ej. Alberto Morales"
             autocomplete="off"
             required
             autofocus
@@ -165,7 +164,7 @@ async function handleSubmit() {
         <div class="form-row-2">
           <!-- Edad -->
           <div class="form-field">
-            <label class="field-label" for="edad-abuelo">
+            <label class="field-label" for="edad-paciente">
               <span>Edad (Años):</span>
             </label>
             <div class="stepper-input">
@@ -178,7 +177,7 @@ async function handleSubmit() {
                 −
               </button>
               <input
-                id="edad-abuelo"
+                id="edad-paciente"
                 v-model.number="edad"
                 type="number"
                 min="50"
@@ -199,7 +198,7 @@ async function handleSubmit() {
 
           <!-- Estatura -->
           <div class="form-field">
-            <label class="field-label" for="estatura-abuelo">
+            <label class="field-label" for="estatura-paciente">
               <span>Estatura (cm):</span>
             </label>
             <div class="stepper-input">
@@ -212,7 +211,7 @@ async function handleSubmit() {
                 −
               </button>
               <input
-                id="estatura-abuelo"
+                id="estatura-paciente"
                 v-model.number="estaturaCm"
                 type="number"
                 min="120"
@@ -235,11 +234,11 @@ async function handleSubmit() {
         <!-- 3. MANO DOMINANTE (ELEMENTO CLAVE) -->
         <div class="form-field dominant-hand-section">
           <label class="field-label">
-            <span>Mano Dominante del Abuelo:</span>
+            <span>Mano Dominante del Paciente:</span>
             <span class="required-star">*</span>
           </label>
           <p class="section-explanation">
-            Selecciona con qué mano tiene mayor fuerza y comodidad. <strong>Todos los botones de la pantalla se moverán a ese lado</strong> para que no tenga que forzar sus brazos.
+            Selecciona con qué mano tiene mayor fuerza y comodidad. <strong>Los botones de la pantalla se ubicarán en ese lado</strong> para que no tenga que forzar sus brazos.
           </p>
 
           <div class="hand-selector-grid">
@@ -250,11 +249,16 @@ async function handleSubmit() {
               :class="{ 'hand-card-active': manoDominante === 'IZQUIERDA' }"
               @click="selectDominantHand('IZQUIERDA')"
             >
-              <div class="hand-card-icon">👈</div>
+              <div class="hand-card-icon">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+              </div>
               <div class="hand-card-text">
                 <strong class="hand-card-name">Mano Izquierda (Zurdo)</strong>
                 <span class="hand-card-desc">
-                  Los botones de acción, menús y navegación se moverán al <strong>lado izquierdo</strong> de la pantalla.
+                  Los botones de acción y menús se ubicarán en el <strong>lado izquierdo</strong> de la pantalla.
                 </span>
               </div>
               <div class="hand-card-check" v-if="manoDominante === 'IZQUIERDA'">
@@ -269,11 +273,16 @@ async function handleSubmit() {
               :class="{ 'hand-card-active': manoDominante === 'DERECHA' }"
               @click="selectDominantHand('DERECHA')"
             >
-              <div class="hand-card-icon">👉</div>
+              <div class="hand-card-icon">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </div>
               <div class="hand-card-text">
                 <strong class="hand-card-name">Mano Derecha (Diestro)</strong>
                 <span class="hand-card-desc">
-                  Los botones de acción, menús y navegación se moverán al <strong>lado derecho</strong> de la pantalla.
+                  Los botones de acción y menús se ubicarán en el <strong>lado derecho</strong> de la pantalla.
                 </span>
               </div>
               <div class="hand-card-check" v-if="manoDominante === 'DERECHA'">
@@ -295,7 +304,7 @@ async function handleSubmit() {
                 :class="{ 'diff-btn-active': dificultad === 'facil' }"
                 @click="dificultad = 'facil'"
               >
-                🌱 Suave / Asistido
+                Suave / Asistido
               </button>
               <button
                 type="button"
@@ -303,7 +312,7 @@ async function handleSubmit() {
                 :class="{ 'diff-btn-active': dificultad === 'medio' }"
                 @click="dificultad = 'medio'"
               >
-                🚶 Intermedio
+                Intermedio
               </button>
               <button
                 type="button"
@@ -311,7 +320,7 @@ async function handleSubmit() {
                 :class="{ 'diff-btn-active': dificultad === 'adaptado' }"
                 @click="dificultad = 'adaptado'"
               >
-                🪑 Sentado
+                Sentado / Adaptado
               </button>
             </div>
           </div>
@@ -336,11 +345,15 @@ async function handleSubmit() {
 
         <!-- Mensaje de Error si falta algún dato -->
         <div v-if="errorMessage" class="error-banner">
-          ⚠️ {{ errorMessage }}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>{{ errorMessage }}</span>
         </div>
 
         <!-- Botones de Acción Final -->
-        <!-- La posición del botón principal se invierte según la mano dominante seleccionada -->
         <div
           class="form-submit-row"
           :class="{
@@ -350,14 +363,12 @@ async function handleSubmit() {
         >
           <button
             type="submit"
-            class="btn-motriz-primary btn-save-grandpa"
+            class="btn-motriz-primary btn-save-patient"
             :disabled="isSaving"
           >
             <span v-if="isSaving">Guardando en Base de Datos...</span>
             <span v-else-if="saveSuccess">¡Guardado con Éxito! ✓</span>
-            <span v-else>
-              Guardar y Continuar {{ manoDominante === 'IZQUIERDA' ? '👈' : '👉' }}
-            </span>
+            <span v-else>Guardar y Continuar</span>
           </button>
         </div>
       </form>
@@ -796,7 +807,7 @@ async function handleSubmit() {
   justify-content: flex-end;
 }
 
-.btn-save-grandpa {
+.btn-save-patient {
   padding: 12px 28px;
   font-size: 1.1rem;
   font-weight: 900;
@@ -807,12 +818,12 @@ async function handleSubmit() {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.btn-save-grandpa:hover:not(:disabled) {
+.btn-save-patient:hover:not(:disabled) {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 12px 26px rgba(140, 29, 44, 0.42);
 }
 
-.btn-save-grandpa:disabled {
+.btn-save-patient:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
@@ -827,7 +838,7 @@ async function handleSubmit() {
   .form-submit-row {
     justify-content: center !important;
   }
-  .btn-save-grandpa {
+  .btn-save-patient {
     width: 100%;
   }
 }

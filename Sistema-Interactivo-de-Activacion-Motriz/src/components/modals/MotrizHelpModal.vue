@@ -19,7 +19,14 @@ function handleClose() {
 
       <div class="help-sections">
         <div class="help-box">
-          <div class="help-icon">🧍</div>
+          <div class="help-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="5" r="3"/>
+              <path d="M12 8v8"/>
+              <path d="m9 21 3-5 3 5"/>
+              <path d="M6 12h12"/>
+            </svg>
+          </div>
           <div>
             <strong>¿Cómo jugar con la cámara?</strong>
             <p>
@@ -29,7 +36,13 @@ function handleClose() {
         </div>
 
         <div class="help-box">
-          <div class="help-icon">📏</div>
+          <div class="help-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m14 10-2-2-7 7 2 2 7-7Z"/>
+              <path d="M7 17l-3 3"/>
+              <path d="M17 7l3-3"/>
+            </svg>
+          </div>
           <div>
             <strong>Estatura y Calibración (RF7)</strong>
             <p>
@@ -39,7 +52,12 @@ function handleClose() {
         </div>
 
         <div class="help-box">
-          <div class="help-icon">🔒</div>
+          <div class="help-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
           <div>
             <strong>Seguridad y Privacidad (RNF6)</strong>
             <p>

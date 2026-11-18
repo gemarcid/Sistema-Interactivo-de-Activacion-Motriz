@@ -13,7 +13,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['back', 'open-settings', 'open-help', 'open-profiles', 'open-abuelo-form'])
+const emit = defineEmits(['back', 'open-settings', 'open-help', 'open-profiles', 'open-patient-form'])
 
 const { activeProfile, isLeftHanded, isRightHanded, dominantHand, toggleDominantHand } = useProfiles()
 
@@ -66,9 +66,9 @@ function handleToggleHand() {
         <span class="brand-subtitle">MOTRIZ</span>
       </div>
 
-      <!-- Abuelo Pill Badge -->
-      <div v-if="activeProfile" class="profile-pill-badge" title="Ver o cambiar abuelo">
-        <span class="profile-avatar">{{ activeProfile.avatar || '👴' }}</span>
+      <!-- Paciente Pill Badge -->
+      <div v-if="activeProfile" class="profile-pill-badge" title="Ver o cambiar paciente">
+        <span class="profile-avatar">{{ activeProfile.avatar || '👤' }}</span>
         <div class="profile-meta">
           <span class="profile-name">{{ activeProfile.name }}</span>
           <span class="profile-height">{{ activeProfile.heightCm }} cm • {{ activeProfile.age }} años</span>
@@ -85,7 +85,15 @@ function handleToggleHand() {
         :title="'Mano dominante actual: ' + dominantHand + '. Clic para alternar.'"
         @click="handleToggleHand"
       >
-        <span class="hand-side-badge">{{ isLeftHanded ? '👈 Izquierda' : '👉 Derecha' }}</span>
+        <span class="hand-side-badge">
+          <svg v-if="isLeftHanded" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+          <span>Mano {{ isLeftHanded ? 'Izquierda' : 'Derecha' }}</span>
+        </span>
       </button>
 
       <!-- Botón Volver -->
@@ -109,9 +117,11 @@ function handleToggleHand() {
         aria-label="Configuración"
         @click="handleSettings"
       >
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="currentColor" fill-opacity="0.2"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+          />
         </svg>
       </button>
 
@@ -119,14 +129,28 @@ function handleToggleHand() {
       <button
         type="button"
         class="btn-round-action"
-        title="Ayuda y recomendaciones"
+        title="Guía de ayuda"
         aria-label="Ayuda"
         @click="handleHelp"
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke-linecap="round"/>
-          <line x1="12" y1="17" x2="12.01" y2="17" stroke-linecap="round"/>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="12" cy="17" r="0.75" fill="currentColor" />
+        </svg>
+      </button>
+
+      <!-- Botón Perfiles -->
+      <button
+        type="button"
+        class="btn-round-action btn-profile-round"
+        title="Cambiar paciente"
+        aria-label="Perfiles"
+        @click="handleProfiles"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
     </div>
@@ -147,7 +171,7 @@ function handleToggleHand() {
   transition: all 0.35s ease;
 }
 
-/* En modo zurdo: se invierte la cabecera para que los botones queden en la mano izquierda del abuelo */
+/* En modo zurdo: se invierte la cabecera para que los botones queden en la mano izquierda del paciente */
 .header-handed-left {
   flex-direction: row-reverse;
 }
@@ -164,82 +188,77 @@ function handleToggleHand() {
 }
 
 .logo-emblem {
-  width: 50px;
-  height: 50px;
-  filter: drop-shadow(0 3px 6px rgba(140, 29, 44, 0.25));
-  transition: transform 0.2s ease;
-}
-
-.logo-area:hover .logo-emblem {
-  transform: scale(1.06);
+  width: 48px;
+  height: 48px;
 }
 
 .emblem-svg {
   width: 100%;
   height: 100%;
+  filter: drop-shadow(0 2px 6px rgba(140, 29, 44, 0.25));
 }
 
 .brand-text {
   display: flex;
   flex-direction: column;
-  line-height: 1.05;
+  line-height: 1;
 }
 
 .brand-title {
-  color: var(--motriz-red-primary);
   font-size: 1.15rem;
   font-weight: 900;
-  letter-spacing: 0.05em;
+  color: var(--motriz-red-primary);
+  letter-spacing: 0.12em;
 }
 
 .brand-subtitle {
-  color: var(--motriz-red-hover);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  color: var(--motriz-text-main);
+  letter-spacing: 0.24em;
+  margin-top: 2px;
 }
 
 .profile-pill-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-left: 18px;
-  padding: 6px 16px;
-  background: #FFF9F2;
-  border: 1.5px solid #E5D5C4;
+  gap: 10px;
+  margin-left: 12px;
+  padding: 6px 14px;
+  background: #FDF2E9;
+  border: 1.5px solid #F5C6A5;
   border-radius: 9999px;
-  box-shadow: 0 2px 6px rgba(90, 60, 40, 0.06);
-  transition: all 0.2s;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .profile-pill-badge:hover {
-  background: #FFFFFF;
-  border-color: var(--motriz-red-primary);
-  transform: translateY(-1px);
+  background: #FEE8D6;
+  transform: scale(1.02);
 }
 
 .profile-avatar {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
 }
 
 .profile-meta {
   display: flex;
   flex-direction: column;
-  line-height: 1.1;
+  text-align: left;
 }
 
 .profile-name {
-  font-size: 0.92rem;
+  font-size: 0.85rem;
   font-weight: 800;
   color: var(--motriz-text-main);
 }
 
 .profile-height {
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   color: var(--motriz-text-muted);
+  font-weight: 600;
 }
 
-/* Header Actions */
 .header-actions {
   display: flex;
   align-items: center;
@@ -247,69 +266,60 @@ function handleToggleHand() {
 }
 
 .btn-hand-toggle {
-  display: flex;
-  align-items: center;
-  background: #FFF0F2;
-  border: 2px solid #F5C2C9;
+  background: rgba(255, 253, 249, 0.95);
+  border: 1.5px solid var(--motriz-card-border);
   border-radius: 9999px;
-  padding: 6px 14px;
+  padding: 8px 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
 }
 
 .btn-hand-toggle:hover {
-  background: #8C1D2C;
-  border-color: #8C1D2C;
-}
-
-.btn-hand-toggle:hover .hand-side-badge {
-  color: #FFFFFF;
+  border-color: var(--motriz-red-primary);
+  transform: scale(1.04);
 }
 
 .hand-side-badge {
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: #8C1D2C;
-  transition: color 0.2s;
-}
-
-.header-back-btn {
-  padding: 10px 18px;
-  font-size: 0.95rem;
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--motriz-red-primary);
+}
+
+.header-back-btn {
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  gap: 8px;
 }
 
 .btn-round-action {
   width: 48px;
   height: 48px;
   border-radius: 50%;
+  border: 2px solid var(--motriz-card-border);
   background: #FFFDF9;
-  border: 2px solid #E8DDD0;
   color: var(--motriz-text-main);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 3px 8px rgba(70, 30, 20, 0.08);
-  transition: all 0.18s;
+  box-shadow: 0 4px 12px rgba(60, 25, 20, 0.06);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-round-action:hover {
-  background: #FFFFFF;
   border-color: var(--motriz-red-primary);
   color: var(--motriz-red-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(140, 29, 44, 0.2);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(140, 29, 44, 0.16);
 }
 
-@media (max-width: 768px) {
-  .motriz-header {
-    padding: 12px 18px;
-  }
-  .brand-text, .profile-pill-badge {
-    display: none;
-  }
+.btn-profile-round {
+  background: var(--motriz-red-soft);
+  color: var(--motriz-red-primary);
+  border-color: #F8B4BE;
 }
 </style>
