@@ -4,10 +4,6 @@ import { useCamera } from '../../composables/useCamera'
 import { BODY_CONNECTIONS } from '../../effects/bodyConnections'
 import { getRainbowColor } from '../../effects/rainbow'
 
-defineProps({
-  showStartup: { type: Boolean, default: true },
-})
-
 const videoRef = ref(null)
 const canvasRef = ref(null)
 let animId = null
@@ -55,9 +51,9 @@ function startCameraLoop() {
 
       if (video && canvas && video.readyState >= 2) {
         const ctx = canvas.getContext('2d')
-        if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
-          canvas.width = video.clientWidth
-          canvas.height = video.clientHeight
+        if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
+          canvas.width = window.innerWidth
+          canvas.height = window.innerHeight
         }
 
         const w = canvas.width
@@ -154,7 +150,7 @@ function drawBodySkeleton(ctx) {
     <div class="motriz-ambient-vignette"></div>
 
     <!-- Camera Startup Overlay if waiting for permission -->
-    <div v-if="showStartup && !isCameraActive" class="camera-startup-overlay">
+    <div v-if="!isCameraActive" class="camera-startup-overlay">
       <div class="startup-card">
         <div class="startup-icon">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8C1D2C" stroke-width="2">
@@ -184,6 +180,8 @@ function drawBodySkeleton(ctx) {
 .fullscreen-camera-layer {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
   z-index: 0;
   background-color: #1a0e10;

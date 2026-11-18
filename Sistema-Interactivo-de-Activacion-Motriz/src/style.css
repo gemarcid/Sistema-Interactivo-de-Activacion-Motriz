@@ -7,11 +7,12 @@
 }
 
 * { box-sizing: border-box; }
-html, body, #app { min-width: 0; margin: 0; padding: 0; }
+html, body, #app { min-width: 320px; min-height: 100%; margin: 0; padding: 0; }
 
 body {
   margin: 0;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
   background-color: #F8F3ED;
   color: #3D1B20;
 }
@@ -23,6 +24,7 @@ body {
     radial-gradient(circle at 10% 10%, rgba(73, 74, 255, .25), transparent 28%),
     radial-gradient(circle at 90% 12%, rgba(0, 234, 255, .14), transparent 26%),
     #050816 !important;
+  min-height: 100vh;
 }
 
 button, select, input { font: inherit; }
@@ -30,14 +32,9 @@ button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .45; }
 
 .app-shell {
-  position: relative;
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  min-height: 0;
   width: min(1220px, calc(100% - 28px));
   margin: 0 auto;
-  padding: 12px 0;
+  padding: 30px 0 48px;
 }
 
 .hero {
@@ -154,9 +151,9 @@ h1 {
 .game-stage {
   position: relative;
   width: 100%;
-  flex: 1;
-  min-height: 100px;
+  max-height: 74vh;
   overflow: hidden;
+  aspect-ratio: 16 / 9;
   border: 1px solid rgba(255, 255, 255, .14);
   border-radius: 26px;
   background: linear-gradient(180deg, #111831, #080c17);
@@ -235,7 +232,6 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  overflow: auto;
   background: rgba(6, 8, 18, .61);
   backdrop-filter: blur(8px);
 }
@@ -311,6 +307,7 @@ h1 {
 
 @media (max-width: 760px) {
   .app-shell { width: min(100% - 18px, 1220px); padding-top: 20px; }
+  .game-stage { max-height: 76vh; aspect-ratio: 3 / 4; }
   .instructions { grid-template-columns: 1fr; }
   .controls { align-items: stretch; }
   .controls button { flex: 1 1 150px; }
@@ -366,51 +363,6 @@ h1 {
 .ranking-card li:last-child { border-bottom: 0; }
 .ranking-card li strong { color: #67e8f9; }
 .empty-ranking { margin: 5px 0 0; color: #94a3b8; font-size: .86rem; }
-.cif-details summary { cursor: pointer; font-weight: 700; }
-.cif-details .bottom-grid { margin-top: 8px; }
-
-@media (max-width: 900px), (max-height: 700px) {
-  .app-shell { padding: 6px 0; }
-  .cif-hero { gap: 8px; margin-bottom: 6px; }
-  .cif-hero h1 { font-size: clamp(1.35rem, 3.5vw, 2rem); }
-  .cif-hero .subtitle { margin-top: 4px; font-size: 0.9rem; }
-  .scoreboard { width: min(100%, 360px); min-width: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-  .scoreboard .last-hit { grid-column: auto; }
-  .scoreboard > div { padding: 4px 6px; }
-  .scoreboard strong { margin-top: 0; font-size: 1rem; }
-  .tech-legend { gap: 4px; margin-bottom: 6px; }
-  .tech-legend span { padding: 2px 5px; }
-  .compact-controls { gap: 4px; padding: 4px; margin-bottom: 6px; }
-  .compact-controls button { min-width: 0; padding: 6px 8px; font-size: 0.85rem; }
-  .compact-controls .toggle { width: auto; font-size: 0.8rem; }
-  .stage-message { padding: 8px; }
-  .stage-message h2 { font-size: 1.1rem; }
-  .camera-icon { font-size: 1.6rem; }
-  .status { min-height: 0; margin: 4px; font-size: 0.82rem; }
-  .game-over-card { padding: 10px; }
-  .game-over-card strong { font-size: 1.5rem; }
-}
-
-@media (max-width: 450px), (max-height: 460px) {
-  .cif-hero .eyebrow,
-  .cif-hero .subtitle {
-    display: none;
-  }
-
-  .cif-hero .scoreboard {
-    width: min(55%, 360px);
-  }
-
-  .cif-hero {
-    flex-direction: row;
-    align-items: center;
-  }
-
-  .compact-controls button {
-    flex: 1 1 105px;
-  }
-}
-
 @media (max-width: 760px) {
   .bottom-grid { grid-template-columns: 1fr; }
   .countdown-number { width: 110px; height: 110px; font-size: 4rem; }

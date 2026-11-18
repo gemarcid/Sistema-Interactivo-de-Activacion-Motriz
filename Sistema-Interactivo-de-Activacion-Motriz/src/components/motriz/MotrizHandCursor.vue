@@ -85,6 +85,7 @@ const strokeDashoffset = computed(() => {
   margin-top: -48px;
   pointer-events: none;
   z-index: 99999;
+  transition: transform 0.04s linear;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,12 +99,8 @@ const strokeDashoffset = computed(() => {
 }
 
 .hand-icon-wrap {
-  position: absolute;
-  top: calc(50% - 7px);
-  left: calc(50% - 20px);
-  width: 48px;
-  height: 48px;
-  transform-origin: 20px 7px;
+  width: 62px;
+  height: 62px;
   display: flex;
   align-items: center;
   justify-content: center;

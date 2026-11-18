@@ -39,7 +39,6 @@ const feedbackPoints = ref(0)
 let feedbackTimeout = null
 
 let animId = null
-let stageObserver = null
 let lastFrameTime = performance.now()
 let spawnAccumulator = 0
 let secondAccumulator = 0
@@ -56,10 +55,8 @@ const TARGET_COLORS = [
 onMounted(async () => {
   if (videoRef.value) {
     await initCamera(videoRef.value)
-    if (!stageRef.value) return
     resizeCanvas()
-    stageObserver = new ResizeObserver(resizeCanvas)
-    stageObserver.observe(stageRef.value)
+    window.addEventListener('resize', resizeCanvas)
     resetGame()
     lastFrameTime = performance.now()
     animId = requestAnimationFrame(gameLoop)
@@ -68,7 +65,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (animId) cancelAnimationFrame(animId)
-  stageObserver?.disconnect()
+  window.removeEventListener('resize', resizeCanvas)
   clearParticles()
 })
 
@@ -425,9 +422,8 @@ const formattedTimer = computed(() => {
 <style scoped>
 .game-view-container {
   display: flex;
-  flex: 1 1 0;
   flex-direction: column;
-  min-height: 0;
+  height: 100vh;
   background: #F7F2EC;
   position: relative;
   overflow: hidden;
@@ -438,8 +434,6 @@ const formattedTimer = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
   padding: 14px 28px;
   background: rgba(255, 253, 249, 0.94);
   backdrop-filter: blur(12px);
@@ -545,8 +539,7 @@ const formattedTimer = computed(() => {
 
 /* Stage */
 .game-stage {
-  flex: 1 1 0;
-  min-height: 0;
+  flex-grow: 1;
   position: relative;
   background: #000000;
   overflow: hidden;
@@ -695,68 +688,5 @@ const formattedTimer = computed(() => {
   width: 100%;
   padding: 14px 20px;
   font-size: 1.15rem;
-}
-
-.game-stage .motriz-modal-overlay {
-  position: absolute;
-}
-
-@media (max-width: 700px), (max-height: 600px) {
-  .game-hud-bar {
-    padding: 6px 8px;
-  }
-
-  .hud-game-pill,
-  .hud-timer-capsule,
-  .hud-points-badge {
-    padding: 4px 8px;
-    gap: 4px;
-  }
-
-  .hud-pill-title {
-    font-size: 0.9rem;
-  }
-
-  .hud-pill-icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .hud-right-group {
-    gap: 6px;
-  }
-
-  .hud-pause-btn {
-    width: 42px;
-    height: 42px;
-  }
-
-  .pause-modal-card {
-    padding: 8px 12px;
-  }
-
-  .pause-desc {
-    margin: 4px 0 10px;
-  }
-
-  .pause-actions {
-    gap: 6px;
-  }
-
-  .pause-btn {
-    padding: 6px 10px;
-    font-size: 1rem;
-  }
-}
-
-@media (min-width: 500px) and (max-height: 460px) {
-  .pause-actions {
-    flex-direction: row;
-  }
-
-  .pause-btn {
-    flex: 1;
-    width: auto;
-  }
 }
 </style>
