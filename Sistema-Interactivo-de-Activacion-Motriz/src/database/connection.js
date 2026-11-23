@@ -1,6 +1,13 @@
-import dotenv from "dotenv";
-
-dotenv.config();
+try {
+  if (typeof process.loadEnvFile === "function") {
+    process.loadEnvFile();
+  } else {
+    const dotenv = await import("dotenv");
+    dotenv.default?.config?.();
+  }
+} catch (e) {
+  // .env ya cargado o no presente
+}
 
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const DATABASE_ID = process.env.CLOUDFLARE_D1_DATABASE_ID;
