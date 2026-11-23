@@ -1,33 +1,24 @@
-import db from '../connection.js';
+import db from "../connection.js";
 
 export default {
-    crearUsuario: (event, usuario) => {
-        return new Promise((resolve, reject) => {
-            const sql = `INSERT INTO usuario (nombre, rol, activo) VALUES (?, ?, ?)`;
-            db.run(sql, [usuario.nombre, usuario.rol, usuario.activo ?? 1], function(err) {
-                if (err) reject(err.message);
-                else resolve({ id_usuario: this.lastID, ...usuario });
-            });
-        });
+    crearUsuario: async (event, usuario) => {
+        const sql = `INSERT INTO usuario (nombre, rol, activo) VALUES (?, ?, ?)`;
+        const res = await db.run(sql, [usuario.nombre, usuario.rol, usuario.activo ?? 1]);
+        return { id_usuario: res.lastID, ...usuario };
     },
 
-    obtenerUsuarios: () => {
-        return new Promise((resolve, reject) => {
-            const sql = `SELECT * FROM usuario WHERE activo = 1`;
-            db.all(sql, [], (err, rows) => {
-                if (err) reject(err.message);
-                else resolve(rows);
-            });
-        });
+    obtenerUsuarios: async () => {
+        const sql = `SELECT * FROM usuario WHERE activo = 1`;
+        return await db.all(sql);
     },
 
-    registrarAuditoria: (event, auditoria) => {
-        return new Promise((resolve, reject) => {
-            const sql = `INSERT INTO auditoria (id_usuario, accion, resultado) VALUES (?, ?, ?)`;
-            db.run(sql, [auditoria.id_usuario, auditoria.accion, auditoria.resultado], function(err) {
-                if (err) reject(err.message);
-                else resolve({ id_auditoria: this.lastID, ...auditoria });
-            });
-        });
+    registrarAuditoria: async (event, auditoria) => {
+        const sql = `INSERT INTO auditoria (id_usuario, accion, resultado) VALUES (?, ?, ?)`;
+        const res = await db.run(sql, [
+            auditoria.id_usuario ?? null,
+            auditoria.accion,
+            auditoria.resultado
+        ]);
+        return { id_auditoria: res.lastID, ...auditoria };
     }
 };

@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Variables de entorno y Cloudflare
+.env
+.env.*
+!.env.example
+.wrangler
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,7 +28,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
 
 #Base de datos SQLite local
 **/data/siam_prod.sqlite
