@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js'
+import { useSessionReports } from '../../composables/useSessionReports'
 import { useProfiles } from '../../composables/useProfiles'
 import { requestReport } from '../../services/sessionReports'
 import { formatDuration } from '../../game/sessionReport'
@@ -10,6 +11,7 @@ import { movements } from '../../game/moveRemember/round'
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 const emit = defineEmits(['close'])
 const { activeProfile, ensureProfileSaved } = useProfiles()
+const { retrySave } = useSessionReports()
 const period = ref('7')
 const rows = ref([])
 const loading = ref(false)
@@ -26,11 +28,12 @@ async function refresh() {
   const profile = activeProfile.value
   try {
     if (!profile) throw new Error('Selecciona un perfil para consultar sus reportes.')
+    await retrySave()
     const id = await ensureProfileSaved(profile)
     const data = await requestReport('listar', { id_perfil: id })
     if (currentRequest !== requestId) return
     rows.value = data
-    selectedId.value = data[0]?.id_sesion ?? null
+    selectedId.value = data.some(row => row.id_sesion === selectedId.value) ? selectedId.value : data[0]?.id_sesion ?? null
   } catch (failure) {
     if (currentRequest === requestId) error.value = failure.message
   } finally {
@@ -52,8 +55,25 @@ const report = computed(() => selected.value?.report)
 const totals = computed(() => chartRows.value.reduce((sum, row) => {
   for (const key of Object.keys(sum)) sum[key] += row.report.totals[key] || 0
   return sum
-}, { activeSeconds: 0, restSeconds: 0, trackingLostSeconds: 0, correct: 0, orderErrors: 0, hints: 0 }))
+}, { activeSeconds: 0, restSeconds: 0, trackingLostSeconds: 0, steps: 0, correct: 0, orderErrors: 0, hints: 0 }))
 const labels = computed(() => chartRows.value.map(row => '#' + row.id_sesion + ' · ' + asDate(row.inicio).toLocaleDateString('es-CL')))
+const mobilityRows = computed(() => chartRows.value.flatMap(row => {
+  const activity = row.report.activities?.filter(activity => activity.game === 'walk' && activity.measuredFrames > 0).at(-1)
+  return activity ? [{ ...row, activity }] : []
+}))
+const jointFields = [
+  ['Rodilla izquierda', 'maxLeftKneeROM', '#8C1D2C'], ['Rodilla derecha', 'maxRightKneeROM', '#D98A91'],
+  ['Cadera', 'maxHipROM', '#D97706'],
+  ['Hombro izquierdo', 'maxLeftShoulderROM', '#426B65'], ['Hombro derecho', 'maxRightShoulderROM', '#79A397'],
+  ['Codo izquierdo', 'maxLeftElbowROM', '#685485'], ['Codo derecho', 'maxRightElbowROM', '#A38DBD'],
+]
+const mobilityData = computed(() => ({
+  labels: mobilityRows.value.map(row => '#' + row.id_sesion + ' · ' + asDate(row.inicio).toLocaleDateString('es-CL')),
+  datasets: jointFields.map(([label, key, backgroundColor]) => ({
+    label, backgroundColor,
+    data: mobilityRows.value.map(row => Number.isFinite(row.activity[key]) ? Math.round(row.activity[key] * 10) / 10 : null),
+  })),
+}))
 const timeData = computed(() => ({
   labels: labels.value,
   datasets: [
@@ -85,8 +105,15 @@ const memoryOptions = {
   ...options,
   scales: { y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'Cantidad' } } },
 }
+const mobilityOptions = {
+  ...options,
+  scales: { y: { beginAtZero: true, title: { display: true, text: 'Amplitud respecto a calibración (°)' } } },
+  onClick(_event, elements) {
+    if (elements[0]) selectedId.value = mobilityRows.value[elements[0].index].id_sesion
+  },
+}
 const motorFields = [
-  ['Pasos', 'steps', ''], ['Cadencia', 'cadence', 'pasos/min'],
+  ['Pasos detectados', 'steps', ''],
   ['Amplitud rodilla izquierda', 'maxLeftKneeROM', '°'], ['Amplitud rodilla derecha', 'maxRightKneeROM', '°'],
   ['Amplitud cadera', 'maxHipROM', '°'],
   ['Amplitud hombro izquierdo', 'maxLeftShoulderROM', '°'], ['Amplitud hombro derecho', 'maxRightShoulderROM', '°'],
@@ -118,22 +145,28 @@ const motorFields = [
         </label>
         <button type="button" class="btn-motriz-secondary" :disabled="loading" @click="refresh">Actualizar</button>
       </div>
-      <p v-if="loading" role="status">Cargando sesiones…</p>
+      <p v-if="loading" role="status">Guardando datos pendientes y cargando sesiones…</p>
       <p v-else-if="error" role="alert">{{ error }}</p>
       <p v-else-if="!visibleRows.length" role="status">Este perfil todavía no tiene sesiones en el período seleccionado. Inicia una nueva partida para registrar su rendimiento.</p>
       <template v-else>
         <dl class="reports-totals">
           <div><dt>Sesiones</dt><dd>{{ visibleRows.length }}</dd></div>
-          <div><dt>Tiempo activo</dt><dd>{{ formatDuration(totals.activeSeconds) }}</dd></div>
-          <div><dt>Descanso</dt><dd>{{ formatDuration(totals.restSeconds) }}</dd></div>
-          <div><dt>Sin seguimiento</dt><dd>{{ formatDuration(totals.trackingLostSeconds) }}</dd></div>
+          <div><dt>Pasos detectados</dt><dd>{{ totals.steps }}</dd></div>
+          <div><dt>Posturas completadas</dt><dd>{{ totals.correct }}</dd></div>
+          <div><dt>Errores de orden</dt><dd>{{ totals.orderErrors }}</dd></div>
         </dl>
         <template v-if="chartRows.length">
-          <h3>Actividad física por sesión</h3>
-          <p class="report-note">El tiempo activo corresponde al movimiento observado por cámara. La quietud, la memorización y los intervalos sin seguimiento se registran por separado.</p>
-          <div class="report-chart"><Bar :data="timeData" :options="options" aria-label="Tiempos por sesión" /></div>
+          <h3>Movilidad de la primera actividad</h3>
+          <p class="report-note">Se compara la amplitud de movimiento de las articulaciones respecto a la calibración, en grados. La duración no determina el resultado de movilidad. Cada sesión muestra su último intento con muestras válidas.</p>
+          <div v-if="mobilityRows.length" class="report-chart"><Bar :data="mobilityData" :options="mobilityOptions" aria-label="Amplitud de movimiento de las articulaciones por sesión" /></div>
+          <p v-else>Sin muestras corporales válidas para mostrar la movilidad.</p>
           <h3>Memoria por sesión</h3>
           <div class="report-chart"><Bar :data="memoryData" :options="memoryOptions" aria-label="Aciertos, errores de orden y pistas por sesión" /></div>
+          <details class="report-timing">
+            <summary>Tiempos de la sesión (información complementaria)</summary>
+            <p class="report-note">Duración del movimiento observado, descanso, quietud, memorización e intervalos sin seguimiento. Estos tiempos no califican la movilidad.</p>
+            <div class="report-chart"><Bar :data="timeData" :options="options" aria-label="Tiempos por sesión" /></div>
+          </details>
         </template>
         <label class="session-picker">Sesión
           <select v-model="selectedId">
@@ -150,7 +183,7 @@ const motorFields = [
           <p v-if="!report.activities.length">Todavía no se han registrado actividades.</p>
           <article v-for="(activity, index) in report.activities" :key="activity.id" class="activity-report">
             <h4>{{ index + 1 }}. {{ { walk: 'Caminata', memory: 'Mueve y Recuerda', rest: 'Descanso' }[activity.game] }} · {{ activity.status }}</h4>
-            <dl class="activity-times">
+            <dl v-if="activity.game !== 'walk'" class="activity-times">
               <div><dt>Activo</dt><dd>{{ formatDuration(activity.activeSeconds) }}</dd></div>
               <div><dt>Descanso</dt><dd>{{ formatDuration(activity.restSeconds) }}</dd></div>
               <div><dt>Quietud</dt><dd>{{ formatDuration(activity.observedIdleSeconds) }}</dd></div>
@@ -162,6 +195,11 @@ const motorFields = [
               <dl v-else class="motor-metrics">
                 <div v-for="[label, key, unit] in motorFields" :key="key"><dt>{{ label }}</dt><dd>{{ activity[key] == null ? 'Sin datos' : Math.round(activity[key] * 10) / 10 + ' ' + unit }}</dd></div>
               </dl>
+              <details>
+                <summary>Tiempos de registro y cadencia (información complementaria)</summary>
+                <p>Movimiento observado: {{ formatDuration(activity.activeSeconds) }} · Quietud: {{ formatDuration(activity.observedIdleSeconds) }} · Sin seguimiento: {{ formatDuration(activity.trackingLostSeconds) }}</p>
+                <p v-if="activity.measuredFrames && activity.cadence != null">Cadencia: {{ activity.cadence }} pasos/min</p>
+              </details>
             </template>
             <template v-if="activity.game === 'memory'">
               <p>{{ activity.correct }} / {{ activity.requested }} posturas completadas · {{ activity.orderErrors }} errores de orden · {{ activity.hints }} pistas</p>

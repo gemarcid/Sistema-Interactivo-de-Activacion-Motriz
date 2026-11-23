@@ -21,6 +21,7 @@ function sqliteApiPlugin() {
 
       server.middlewares.use(async (req, res, next) => {
         if (req.url?.split('?')[0] === '/api/reportes') {
+          res.setHeader('Cache-Control', 'no-store');
           res.setHeader('Content-Type', 'application/json');
           try {
             if (!reportsController) throw new Error(databaseError || 'Cloudflare D1 no está disponible');
