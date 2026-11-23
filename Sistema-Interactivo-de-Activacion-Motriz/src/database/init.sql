@@ -1,10 +1,6 @@
 -- ==========================================================
--- init.sql - Base de datos SQLite para Sistema Interactivo de Activación Motriz (SIAM)
+-- init.sql - Base de datos Cloudflare D1 (SQLite) para SIAM
 -- ==========================================================
-
-PRAGMA foreign_keys = ON;
-
-BEGIN TRANSACTION;
 
 /* =========================
    USUARIOS Y PERFILES
@@ -227,6 +223,3 @@ GROUP BY
     r.tipo,
     r.generado_en,
     r.resumen;
-
-COMMIT;
-

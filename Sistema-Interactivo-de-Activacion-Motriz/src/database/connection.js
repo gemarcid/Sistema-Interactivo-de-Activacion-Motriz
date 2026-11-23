@@ -1,30 +1,67 @@
-import sqlite3Pkg from 'sqlite3';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 
-const sqlite3 = sqlite3Pkg.verbose();
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-// Resuelve siempre a <app-root>/data sin importar desde qué carpeta se ejecute Node/Vite
-const dataDir = path.resolve(__dirname, '../../data');
+const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
+const DATABASE_ID = process.env.CLOUDFLARE_D1_DATABASE_ID;
+const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+if (!ACCOUNT_ID || !DATABASE_ID || !API_TOKEN) {
+    console.error("Faltan variables de entorno de Cloudflare D1 en .env");
 }
 
-const dbPath = process.env.DB_PATH || path.join(dataDir, 'siam_prod.sqlite');
+const D1_ENDPOINT = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/d1/database/${DATABASE_ID}/query`;
 
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('❌ Error al conectar con SQLite:', err.message);
-    } else {
-        console.log(`✅ Conectado a SQLite. Ruta: ${dbPath}`);
-        db.run('PRAGMA foreign_keys = ON;');
+async function query(payload) {
+    if (!ACCOUNT_ID || !DATABASE_ID || !API_TOKEN) throw new Error("Configura Cloudflare D1 en el archivo .env para consultar y guardar los reportes.");
+    const response = await fetch(D1_ENDPOINT, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${API_TOKEN}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error HTTP en Cloudflare D1 (${response.status}): ${errorText}`);
     }
-});
+
+    const data = await response.json();
+
+    if (!data.success) {
+        const messages = (data.errors || []).map((err) => err.message).join("; ");
+        throw new Error(`Error SQL en Cloudflare D1: ${messages}`);
+    }
+
+    const results = data.result || [];
+    const failed = results.find(result => result.success === false || result.error);
+    if (failed) throw new Error(failed.error || "No se pudo ejecutar la consulta en D1");
+    return results;
+}
+
+const db = {
+    async batch(statements) {
+        return query({ batch: statements });
+    },
+    async all(sql, params = []) {
+        const { results = [] } = (await query({ sql, params }))[0] || {};
+        return results;
+    },
+
+    async get(sql, params = []) {
+        const { results = [] } = (await query({ sql, params }))[0] || {};
+        return results[0] || null;
+    },
+
+    async run(sql, params = []) {
+        const { meta = {} } = (await query({ sql, params }))[0] || {};
+        return {
+            lastID: meta.last_row_id ?? null,
+            changes: meta.changes ?? 0
+        };
+    }
+};
 
 export default db;

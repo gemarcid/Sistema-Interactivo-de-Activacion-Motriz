@@ -3,18 +3,42 @@ import test from 'node:test'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 
-process.env.DB_PATH = ':memory:'
+import { DatabaseSync } from 'node:sqlite'
 
-test('session reports preserve profiles, retry safely, and isolate each session', async () => {
+process.env.CLOUDFLARE_ACCOUNT_ID = 'test-account'
+process.env.CLOUDFLARE_D1_DATABASE_ID = 'test-database'
+process.env.CLOUDFLARE_API_TOKEN = 'test-token'
+
+test('D1 reports preserve profiles, retry safely, and isolate each session', async () => {
+  const local = new DatabaseSync(':memory:')
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async (_url, options) => {
+    const body = JSON.parse(options.body)
+    const queries = body.batch || [body]
+    try {
+      local.exec('BEGIN')
+      const result = queries.map(({ sql, params = [] }) => {
+        const statement = local.prepare(sql)
+        const results = statement.all(...params)
+        const meta = local.prepare('SELECT last_insert_rowid() AS last_row_id, changes() AS changes').get()
+        return { success: true, results, meta }
+      })
+      local.exec('COMMIT')
+      return { ok: true, json: async () => ({ success: true, result }) }
+    } catch (error) {
+      local.exec('ROLLBACK')
+      return { ok: true, json: async () => ({ success: false, errors: [{ message: error.message }] }) }
+    }
+  }
   const { default: db } = await import('../connection.js')
   const { initDatabase } = await import('../init.js')
   const { default: patients } = await import('./patientController.js')
   const { default: reports } = await import('./sessionReportsController.js')
-  const rows = sql => new Promise((resolve, reject) => db.all(sql, (error, result) => error ? reject(error) : resolve(result)))
+  const rows = sql => db.all(sql)
   try {
     const oldSchema = readFileSync(new URL('../init.sql', import.meta.url), 'utf8')
       .replace(/CREATE TABLE IF NOT EXISTS sesion_rendimiento \([\s\S]*?\);/, '')
-    await new Promise((resolve, reject) => db.exec(oldSchema, error => error ? reject(error) : resolve()))
+    local.exec(oldSchema)
     const legacy = await patients.crearPerfil(null, { nombre: 'Perfil anterior', edad: 70, estatura_cm: 155 })
     await initDatabase()
     const alice = await patients.crearPerfil(null, { nombre: 'Paciente A', edad: 75, estatura_cm: 160 })
@@ -58,6 +82,7 @@ test('session reports preserve profiles, retry safely, and isolate each session'
     assert.equal((await rows('PRAGMA integrity_check'))[0].integrity_check, 'ok')
     assert.deepEqual(await rows('PRAGMA foreign_key_check'), [])
   } finally {
-    await new Promise(resolve => db.close(resolve))
+    globalThis.fetch = originalFetch
+    local.close()
   }
 })

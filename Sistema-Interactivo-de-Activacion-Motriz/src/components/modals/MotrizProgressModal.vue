@@ -118,7 +118,7 @@ const motorFields = [
         </label>
         <button type="button" class="btn-motriz-secondary" :disabled="loading" @click="refresh">Actualizar</button>
       </div>
-      <p v-if="loading" role="status">Cargando sesiones de SQLite…</p>
+      <p v-if="loading" role="status">Cargando sesiones…</p>
       <p v-else-if="error" role="alert">{{ error }}</p>
       <p v-else-if="!visibleRows.length" role="status">Este perfil todavía no tiene sesiones en el período seleccionado. Inicia una nueva partida para registrar su rendimiento.</p>
       <template v-else>
@@ -182,7 +182,7 @@ const motorFields = [
 </template>
 
 <style scoped>
-.reports-card { width: min(1100px, 100%); max-height: calc(100dvh - 32px); padding: clamp(16px, 3vw, 30px); overflow: auto; }
+.reports-card { min-width: 0; box-sizing: border-box; overflow-wrap: anywhere; width: min(1100px, 100%); max-height: calc(100dvh - 32px); padding: clamp(16px, 3vw, 30px); overflow: auto; }
 .reports-header, .reports-filters { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .reports-header h2, h3, h4 { margin: 0 0 8px; color: var(--motriz-red-primary); }
 .reports-header p { margin: 0; }
@@ -198,7 +198,7 @@ dd { margin: 0; font-weight: 800; color: var(--motriz-red-primary); }
 .session-picker { margin: 16px 0; }
 .activity-report { border: 2px solid var(--motriz-card-border); border-radius: 16px; padding: 16px; margin: 12px 0; }
 .motor-metrics { display: grid; gap: 6px; }
-.motor-metrics > div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--motriz-card-border); padding: 4px 0; }
+.motor-metrics > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--motriz-card-border); padding: 4px 0; }
 .activity-report li { padding: 3px 0; }
 @media (max-width: 600px) {
   .reports-overlay { padding: 8px; }

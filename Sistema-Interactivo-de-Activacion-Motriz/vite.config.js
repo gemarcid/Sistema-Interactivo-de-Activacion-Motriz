@@ -7,6 +7,7 @@ function sqliteApiPlugin() {
     async configureServer(server) {
       let patientController = null;
       let reportsController = null;
+      let databaseError = '';
       try {
         const initMod = await import('./src/database/init.js');
         await initMod.initDatabase();
@@ -14,14 +15,15 @@ function sqliteApiPlugin() {
         patientController = ctrlMod.default || ctrlMod;
         reportsController = (await import('./src/database/controllers/sessionReportsController.js')).default;
       } catch (e) {
-        console.warn('Advertencia al inicializar SQLite en Vite:', e.message);
+        databaseError = e.message;
+        console.warn('Advertencia al inicializar Cloudflare D1 en Vite:', e.message);
       }
 
       server.middlewares.use(async (req, res, next) => {
         if (req.url?.split('?')[0] === '/api/reportes') {
           res.setHeader('Content-Type', 'application/json');
           try {
-            if (!reportsController) throw new Error('SQLite no está disponible');
+            if (!reportsController) throw new Error(databaseError || 'Cloudflare D1 no está disponible');
             let data;
             if (req.method === 'GET') {
               const url = new URL(req.url, 'http://localhost');
@@ -52,7 +54,7 @@ function sqliteApiPlugin() {
           if (!patientController) {
             res.statusCode = 503;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ success: false, error: 'Base de datos SQLite no disponible' }));
+            res.end(JSON.stringify({ success: false, error: databaseError || 'Cloudflare D1 no disponible' }));
             return;
           }
 

@@ -1,29 +1,11 @@
 import db from '../connection.js'
 import { summarizeActivities } from '../../game/sessionReport.js'
 
-const run = (sql, params = []) => new Promise((resolve, reject) => {
-  db.run(sql, params, function (error) {
-    if (error) reject(error)
-    else resolve({ id: this.lastID, changes: this.changes })
-  })
-})
-const all = (sql, params = []) => new Promise((resolve, reject) => {
-  db.all(sql, params, (error, rows) => error ? reject(error) : resolve(rows))
-})
+const all = (sql, params = []) => db.all(sql, params)
 let queue = Promise.resolve()
 
 function transaction(operation) {
-  const task = queue.then(async () => {
-    await run('BEGIN IMMEDIATE')
-    try {
-      const result = await operation()
-      await run('COMMIT')
-      return result
-    } catch (error) {
-      await run('ROLLBACK')
-      throw error
-    }
-  })
+  const task = queue.then(operation)
   queue = task.catch(() => {})
   return task
 }
@@ -78,13 +60,23 @@ export default {
       if (payload.profileName && payload.profileName.trim().toLowerCase() !== profile.nombre.trim().toLowerCase()) {
         throw new Error('El perfil seleccionado cambió en la base de datos. Vuelve a seleccionarlo.')
       }
-      await run("INSERT OR IGNORE INTO minijuego (nombre, modalidad) VALUES ('Sesión motriz guiada', 'CAMARA')")
-      const [game] = await all("SELECT id_minijuego FROM minijuego WHERE nombre = 'Sesión motriz guiada'")
-      const session = await run('INSERT INTO sesion (id_perfil, id_minijuego) VALUES (?, ?)', [profile.id_perfil, game.id_minijuego])
-      await run('INSERT INTO sesion_rendimiento (clave, id_sesion, id_perfil) VALUES (?, ?, ?)', [payload.key, session.id, profile.id_perfil])
       const report = { version: 1, profile, activities: [], totals: summarizeActivities([]) }
-      await run("INSERT INTO reporte (id_sesion, tipo, resumen) VALUES (?, 'RENDIMIENTO', ?)", [session.id, JSON.stringify(report)])
-      return { id_sesion: session.id, id_perfil: profile.id_perfil, profile }
+      // D1 executes this batch atomically; conditional inserts make retries safe.
+      await db.batch([
+        { sql: "INSERT OR IGNORE INTO minijuego (nombre, modalidad) VALUES ('Sesión motriz guiada', 'CAMARA')", params: [] },
+        { sql: `INSERT INTO sesion (id_perfil, id_minijuego)
+            SELECT ?, id_minijuego FROM minijuego WHERE nombre = 'Sesión motriz guiada'
+            AND NOT EXISTS (SELECT 1 FROM sesion_rendimiento WHERE clave = ?)`, params: [profile.id_perfil, payload.key] },
+        { sql: `INSERT INTO sesion_rendimiento (clave, id_sesion, id_perfil)
+            SELECT ?, last_insert_rowid(), ? WHERE NOT EXISTS (SELECT 1 FROM sesion_rendimiento WHERE clave = ?)`,
+          params: [payload.key, profile.id_perfil, payload.key] },
+        { sql: `INSERT OR IGNORE INTO reporte (id_sesion, tipo, resumen)
+            SELECT id_sesion, 'RENDIMIENTO', ? FROM sesion_rendimiento WHERE clave = ? AND id_perfil = ?`,
+          params: [JSON.stringify(report), payload.key, profile.id_perfil] },
+      ])
+      const [created] = await all('SELECT id_sesion, id_perfil FROM sesion_rendimiento WHERE clave = ?', [payload.key])
+      if (!created || created.id_perfil !== profile.id_perfil) throw new Error('La sesión pertenece a otro perfil')
+      return { ...created, profile }
     })
   },
 
@@ -101,19 +93,32 @@ export default {
       const [previous] = await all('SELECT resumen FROM reporte WHERE id_sesion = ?', [session.id_sesion])
       const stored = JSON.parse(previous.resumen)
       const report = { ...payload.snapshot, profile: stored.profile, totals: summarizeActivities(payload.snapshot.activities) }
-      await run("UPDATE reporte SET resumen = ?, generado_en = CURRENT_TIMESTAMP WHERE id_sesion = ?", [JSON.stringify(report), session.id_sesion])
-      await run('DELETE FROM telemetria WHERE id_sesion = ?', [session.id_sesion])
+      const guard = `EXISTS (SELECT 1 FROM sesion_rendimiento sr JOIN sesion s USING (id_sesion)
+        WHERE sr.id_sesion = ? AND sr.clave = ? AND sr.revision < ? AND s.estado = 'INICIADA')`
+      const guardParams = [session.id_sesion, payload.key, payload.revision]
+      const statements = [
+        { sql: `UPDATE reporte SET resumen = ?, generado_en = CURRENT_TIMESTAMP WHERE id_sesion = ? AND ${guard}`,
+          params: [JSON.stringify(report), session.id_sesion, ...guardParams] },
+        { sql: `DELETE FROM telemetria WHERE id_sesion = ? AND ${guard}`, params: [session.id_sesion, ...guardParams] },
+      ]
       for (const activity of report.activities) {
-        await run(`INSERT INTO telemetria (id_sesion, tiempo_activo, tiempo_descanso, puntaje, vector_movimiento, centro_gravedad)
-          VALUES (?, ?, ?, ?, ?, ?)`, [
+        statements.push({ sql: `INSERT INTO telemetria (id_sesion, tiempo_activo, tiempo_descanso, puntaje, vector_movimiento, centro_gravedad)
+          SELECT ?, ?, ?, ?, ?, ? WHERE ${guard}`, params: [
           session.id_sesion, activity.activeSeconds || 0, activity.restSeconds || 0,
           activity.game === 'memory' ? activity.correct : null,
           JSON.stringify(activity), activity.game === 'walk' ? JSON.stringify({ source: 'camera', x: activity.comMaxSwayX, y: activity.comMaxSwayY }) : null,
-        ])
+          ...guardParams,
+        ] })
       }
-      await run('UPDATE sesion_rendimiento SET revision = ? WHERE id_sesion = ?', [payload.revision, session.id_sesion])
-      await run(`UPDATE sesion SET estado = ?, fin = CASE WHEN ? = 'INICIADA' THEN NULL ELSE CURRENT_TIMESTAMP END
-        WHERE id_sesion = ?`, [report.status, report.status, session.id_sesion])
+      statements.push(
+        { sql: `UPDATE sesion_rendimiento SET revision = ? WHERE id_sesion = ? AND ${guard}`,
+          params: [payload.revision, session.id_sesion, ...guardParams] },
+        { sql: `UPDATE sesion SET estado = ?, fin = CASE WHEN ? = 'INICIADA' THEN NULL ELSE CURRENT_TIMESTAMP END
+            WHERE id_sesion = ? AND estado = 'INICIADA' AND EXISTS (
+              SELECT 1 FROM sesion_rendimiento WHERE id_sesion = ? AND clave = ? AND revision = ?)`,
+          params: [report.status, report.status, session.id_sesion, session.id_sesion, payload.key, payload.revision] },
+      )
+      await db.batch(statements)
       return { success: true }
     })
   },
