@@ -5,6 +5,7 @@ import BalloonGame from '../games/BalloonGame.vue'
 import MotrizGameView from './MotrizGameView.vue'
 import MotrizWalkTestView from './MotrizWalkTestView.vue'
 import MotrizMovementIcon from '../games/MotrizMovementIcon.vue'
+import MotrizMathOrderView from './MotrizMathOrderView.vue'
 import { movements } from '../../game/moveRemember/round'
 
 const emit = defineEmits(['back', 'open-move-remember'])
@@ -67,6 +68,16 @@ function handleBack() {
       <MotrizWalkTestView @finish="activeTab = 'hub'" @exit="activeTab = 'hub'" />
     </div>
 
+    <div v-else-if="activeTab === 'ordena-numeros'" class="subgame-wrapper">
+      <div class="subgame-nav">
+        <button type="button" class="btn-motriz-secondary btn-nav-back" @click="activeTab = 'hub'">
+          ← Volver a Zona de Pruebas
+        </button>
+        <span class="subgame-title">Ordena los Números</span>
+      </div>
+      <MotrizMathOrderView @finish="activeTab = 'hub'" @exit="activeTab = 'hub'" />
+    </div>
+
     <!-- Lab Hub Main View -->
     <div v-else class="lab-hub-content">
       <div class="lab-header">
@@ -77,6 +88,18 @@ function handleBack() {
       </div>
 
       <div class="lab-cards-grid">
+        <div class="lab-card" @click="handleSelect('ordena-numeros')">
+          <div class="card-pill-tag tag-ready">Listo para jugar</div>
+          <div class="card-icon">🔢</div>
+          <h3>Ordena los Números</h3>
+          <p>
+            Ecuaciones matemáticas simples con números del 1 al 10 para estimulación cognitiva y motriz.
+          </p>
+          <button type="button" class="btn-motriz-primary btn-launch">
+            Abrir Ordena Números
+          </button>
+        </div>
+
         <div class="lab-card" @click="openMoveRemember">
           <div class="card-pill-tag tag-ready">Listo para jugar</div>
           <MotrizMovementIcon :arms="memoryIcon.arms" class="card-icon memory-icon" />

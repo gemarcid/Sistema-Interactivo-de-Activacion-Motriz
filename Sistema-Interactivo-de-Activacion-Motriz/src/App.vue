@@ -9,6 +9,7 @@ import MotrizCalibrationView from './components/views/MotrizCalibrationView.vue'
 import MotrizWalkTestView from './components/views/MotrizWalkTestView.vue'
 import MotrizRestView from './components/views/MotrizRestView.vue'
 import MotrizMoveRememberView from './components/views/MotrizMoveRememberView.vue'
+import MotrizMathOrderView from './components/views/MotrizMathOrderView.vue'
 import MotrizCompletedView from './components/views/MotrizCompletedView.vue'
 import MotrizTestingLabView from './components/views/MotrizTestingLabView.vue'
 import MotrizInitialForm from './components/forms/MotrizInitialForm.vue'
@@ -53,6 +54,10 @@ function handleRestContinue() {
 
 // Al terminar la ronda de Mueve y Recuerda -> pasa a la pantalla de completado
 function handleMoveRememberFinish() {
+  currentView.value = 'completed'
+}
+
+function handleMathOrderFinish() {
   currentView.value = 'completed'
 }
 
@@ -125,6 +130,12 @@ function handleExitToHome() {
       <MotrizMoveRememberView
         v-else-if="currentView === 'move-remember'"
         @finish="handleMoveRememberFinish"
+        @exit="handleExitToHome"
+      />
+
+      <MotrizMathOrderView
+        v-else-if="currentView === 'math-order'"
+        @finish="handleMathOrderFinish"
         @exit="handleExitToHome"
       />
 
