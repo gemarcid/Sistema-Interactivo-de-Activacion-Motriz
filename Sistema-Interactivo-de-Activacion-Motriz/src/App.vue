@@ -159,6 +159,7 @@ function handleExitToHome() {
         v-else-if="currentView === 'lab'"
         @back="handleExitToHome"
         @open-move-remember="currentView = 'move-remember'"
+        @open-math-order="currentView = 'math-order'"
       />
     </main>
 

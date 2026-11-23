@@ -25,6 +25,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  customTips: {
+    type: Array,
+    default: null,
+  },
 })
 
 const emit = defineEmits(['start-play', 'exit'])
@@ -48,7 +52,7 @@ const alignmentFeedback = computed(() => {
     if (bodyDetected.value) return 'Asegúrate de que tus piernas y pies estén dentro de la guía.'
     return 'Párate frente a la cámara mostrando tus piernas y pies.'
   }
-  if (props.mode === 'upper-body') {
+  if (props.mode === 'upper-body' || props.mode === 'math-order') {
     if (isAligned.value) return '¡Excelente! Torso y brazos calibrados para las posturas.'
     if (bodyDetected.value) return 'Coloca tu torso y brazos dentro de la silueta.'
     return 'Párate mostrando tu torso y brazos frente a la pantalla.'
@@ -129,7 +133,7 @@ function drawCalibrationSilhouette(ctx, width, height, aligned, detected) {
   const hipWidth = width * 0.12
   const armSpan = width * 0.22
 
-  if (props.mode === 'upper-body') {
+  if (props.mode === 'upper-body' || props.mode === 'math-order') {
     // ========================================================
     // MODO TREN SUPERIOR: SOLO DE LA CINTURA PARA ARRIBA
     // ========================================================
@@ -416,8 +420,42 @@ function handleExit() {
           </p>
 
           <div class="advice-list">
+            <template v-if="customTips && customTips.length">
+              <div v-for="(tip, idx) in customTips" :key="idx" class="advice-row">
+                <div class="advice-bubble">{{ tip.icon }}</div>
+                <div>
+                  <strong>{{ tip.title }}</strong>
+                  <p>{{ tip.text }}</p>
+                </div>
+              </div>
+            </template>
+
+            <template v-else-if="mode === 'math-order'">
+              <div class="advice-row">
+                <div class="advice-bubble">🙌</div>
+                <div>
+                  <strong>Brazos despejados</strong>
+                  <p>Espacio libre para levantar los brazos a los lados y alcanzar los números.</p>
+                </div>
+              </div>
+              <div class="advice-row">
+                <div class="advice-bubble">🔢</div>
+                <div>
+                  <strong>Calcula y resuelve</strong>
+                  <p>Observa la suma o resta y busca los números que den el resultado.</p>
+                </div>
+              </div>
+              <div class="advice-row">
+                <div class="advice-bubble">⏱️</div>
+                <div>
+                  <strong>Coloca cada número</strong>
+                  <p>Lleva los números a las casillas vacías con tus manos hasta que el sistema los registre.</p>
+                </div>
+              </div>
+            </template>
+
             <!-- Caso: Modo Caminata (Cintura para abajo) -->
-            <template v-if="mode === 'lower-body'">
+            <template v-else-if="mode === 'lower-body'">
               <div class="advice-row">
                 <div class="advice-bubble">👟</div>
                 <div>
