@@ -35,6 +35,14 @@ const completedResults = computed(() => ({
 // Estado de la vista activa en el flujo de juego
 // 'home' -> 'walk-test' -> 'rest' -> 'move-remember' -> 'completed' | 'lab'
 const currentView = ref('home')
+const isLabSubgame = ref(false)
+const labRef = ref(null)
+
+// En cualquier modo de juego, la cabecera se auto-oculta y solo aparece al subir el mouse
+const isGameView = computed(() => {
+  return ['walk-test', 'move-remember', 'calibration'].includes(currentView.value) ||
+         (currentView.value === 'lab' && isLabSubgame.value)
+})
 
 // Pantalla inicial del formulario del paciente (se muestra al iniciar o al solicitarlo)
 const showInitialForm = ref(true)
@@ -82,17 +90,20 @@ async function handleMoveRememberFinish() {
 }
 
 function handleOpenLab() {
+  isLabSubgame.value = false
   currentView.value = 'lab'
 }
 
 async function handleOpenOriginalCIF() {
   showSettingsModal.value = false
+  isLabSubgame.value = false
   currentView.value = 'lab'
   await nextTick()
   reports.closeSession('CANCELADA').catch(() => {})
 }
 
 async function handleExitToHome() {
+  isLabSubgame.value = false
   currentView.value = 'home'
   await nextTick()
   reports.closeSession('CANCELADA').catch(() => {})
@@ -111,6 +122,14 @@ async function handleOpenMemory() {
     starting.value = false
   }
 }
+
+function handleHeaderBack() {
+  if (currentView.value === 'lab' && isLabSubgame.value) {
+    labRef.value?.goBackToHub()
+  } else {
+    handleExitToHome()
+  }
+}
 </script>
 
 <template>
@@ -127,12 +146,13 @@ async function handleOpenMemory() {
     <!-- 2. VIRTUAL HAND CURSOR (Tracks hand movement & performs dwell click; mouse also works natively) -->
     <MotrizHandCursor />
 
-    <!-- 3. TOP ASISTENCIA MOTRIZ HEADER -->
+    <!-- 3. TOP ASISTENCIA MOTRIZ HEADER (Auto-ocultable en juegos) -->
     <MotrizHeader
       v-if="currentView !== 'completed'"
-      :show-back="currentView !== 'home'"
-      :back-label="currentView === 'home' ? '' : 'Salir al Menú'"
-      @back="handleExitToHome"
+      :show-back="currentView !== 'home' || isLabSubgame"
+      :back-label="isLabSubgame ? 'Volver a Zona de Pruebas' : (currentView === 'home' ? '' : 'Salir al Menú')"
+      :autohide="isGameView"
+      @back="handleHeaderBack"
       @open-settings="showSettingsModal = true"
       @open-help="showHelpModal = true"
       @open-profiles="showProfileModal = true"
@@ -202,8 +222,10 @@ async function handleOpenMemory() {
       <!-- Zona de Pruebas y Prototipos CIF -->
       <MotrizTestingLabView
         v-else-if="currentView === 'lab'"
+        ref="labRef"
         @back="handleExitToHome"
-        @open-move-remember="handleOpenMemory"
+        @subgame-active="(active) => isLabSubgame = active"
+        @open-move-remember="currentView = 'move-remember'"
       />
     </main>
 
