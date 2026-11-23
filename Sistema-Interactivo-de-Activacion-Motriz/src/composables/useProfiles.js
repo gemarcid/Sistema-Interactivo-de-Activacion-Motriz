@@ -77,6 +77,7 @@ function loadActiveId() {
 const profiles = ref(loadProfiles())
 const activeId = ref(loadActiveId())
 const isSyncedWithDb = ref(false)
+let databaseProfiles = null
 
 function saveProfiles() {
   try {
@@ -196,6 +197,7 @@ async function syncFromDatabase(force = false) {
     }
   }
 
+  databaseProfiles = Array.isArray(dbProfiles) ? dbProfiles : null
   if (dbProfiles && dbProfiles.length > 0) {
     // Fusionar con profiles existentes sin cruzar datos si cambió la BD
     dbProfiles.forEach((dbp) => {
@@ -369,6 +371,19 @@ export function useProfiles() {
     saveProfiles()
   }
 
+  async function ensureProfileSaved(profile) {
+    await syncFromDatabase(true)
+    if (!databaseProfiles) throw new Error('No se pudo conectar con SQLite para verificar el perfil.')
+    if (databaseProfiles.some(row => row.id_perfil === profile.dbId && row.nombre.trim().toLowerCase() === profile.name.trim().toLowerCase())) {
+      return profile.dbId
+    }
+    const result = await persistToDatabase(profile)
+    if (!result?.id_perfil) throw new Error('No se pudo registrar el perfil en SQLite. Revisa la conexión e inténtalo otra vez.')
+    profile.dbId = result.id_perfil
+    saveProfiles()
+    return profile.dbId
+  }
+
   return {
     profiles,
     activeProfile,
@@ -381,5 +396,6 @@ export function useProfiles() {
     toggleDominantHand,
     syncFromDatabase,
     updateActiveStats,
+    ensureProfileSaved,
   }
 }

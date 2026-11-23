@@ -10,8 +10,7 @@ export async function initDatabase() {
         const colNames = columns.map((c) => c.name);
 
         if (colNames.length === 0) {
-            console.warn("Las tablas aún no existen en D1. Ejecuta init.sql con Wrangler.");
-            return;
+            throw new Error("Las tablas aún no existen en D1. Ejecuta init.sql con Wrangler.");
         }
 
         if (!colNames.includes("mano_dominante")) {
@@ -26,7 +25,13 @@ export async function initDatabase() {
             await db.run("ALTER TABLE perfil ADD COLUMN avatar TEXT DEFAULT '👴';");
             console.log("Columna avatar agregada a perfil");
         }
+        await db.run(`CREATE TABLE IF NOT EXISTS sesion_rendimiento (
+            clave TEXT PRIMARY KEY,
+            id_sesion INTEGER NOT NULL UNIQUE REFERENCES sesion(id_sesion) ON DELETE CASCADE,
+            id_perfil INTEGER NOT NULL REFERENCES perfil(id_perfil),
+            revision INTEGER NOT NULL DEFAULT 0
+        )`);
     } catch (err) {
-        console.error("Error al verificar la base de datos D1:", err.message);
+        throw new Error(`No se pudo inicializar Cloudflare D1: ${err.message}`);
     }
 }

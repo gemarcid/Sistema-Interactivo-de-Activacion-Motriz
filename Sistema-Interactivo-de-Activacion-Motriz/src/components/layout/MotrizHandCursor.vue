@@ -11,7 +11,7 @@ const strokeDashoffset = computed(() => {
 
 <template>
   <div
-    v-if="handCursorState.active"
+    v-if="handCursorState.active && (!handCursorState.onlyShowOnHover || handCursorState.isHovering)"
     class="virtual-hand-cursor"
     :class="{ 'cursor-hovering': handCursorState.isHovering }"
     :style="{

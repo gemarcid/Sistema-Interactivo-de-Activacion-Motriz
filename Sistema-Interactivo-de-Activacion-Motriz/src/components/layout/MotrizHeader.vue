@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import { useProfiles } from '../../composables/useProfiles'
 import { playClickTone, playSelectTone } from '../../composables/useAudio'
 
@@ -11,9 +12,17 @@ const props = defineProps({
     type: String,
     default: 'Volver',
   },
+  autohide: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['back', 'open-settings', 'open-help', 'open-profiles', 'open-patient-form'])
+// Header hover state for autohide
+const isHeaderHovered = ref(false)
+
+// Emit full set of events used by the app (including progress report)
+const emit = defineEmits(['back', 'open-settings', 'open-help', 'open-profiles', 'open-patient-form', 'open-progress'])
 
 const { activeProfile, isLeftHanded, isRightHanded, dominantHand, toggleDominantHand } = useProfiles()
 
@@ -44,9 +53,23 @@ function handleToggleHand() {
 </script>
 
 <template>
+  <!-- Top hover hotspot detector when autohide is enabled -->
+  <div
+    v-if="autohide"
+    class="header-hover-hotspot"
+    @mouseenter="isHeaderHovered = true"
+  />
+
   <header
     class="motriz-header"
-    :class="{ 'header-handed-left': isLeftHanded, 'header-handed-right': isRightHanded }"
+    :class="{
+      'header-handed-left': isLeftHanded,
+      'header-handed-right': isRightHanded,
+      'header-autohide': autohide,
+      'header-revealed': !autohide || isHeaderHovered,
+    }"
+    @mouseenter="isHeaderHovered = true"
+    @mouseleave="isHeaderHovered = false"
   >
     <!-- Logo & Branding -->
     <div class="logo-area" @click="handleProfiles">
@@ -78,6 +101,9 @@ function handleToggleHand() {
 
     <!-- Header Actions (Reposicionados según la mano dominante) -->
     <div class="header-actions">
+      <button type="button" class="btn-motriz-secondary header-back-btn" @click="emit('open-progress')">
+        Reportes
+      </button>
       <!-- Indicador / Alternador de Mano Dominante -->
       <button
         type="button"
@@ -158,6 +184,17 @@ function handleToggleHand() {
 </template>
 
 <style scoped>
+.header-hover-hotspot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 35px;
+  z-index: 99;
+  background: transparent;
+  pointer-events: auto;
+}
+
 .motriz-header {
   display: flex;
   align-items: center;
@@ -169,6 +206,22 @@ function handleToggleHand() {
   position: relative;
   z-index: 30;
   transition: all 0.35s ease;
+}
+
+/* Modo Auto-ocultar durante juegos: aparece suavemente solo al subir el mouse a la parte superior */
+.motriz-header.header-autohide {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  transform: translateY(-100%);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.motriz-header.header-autohide.header-revealed {
+  transform: translateY(0);
 }
 
 /* En modo zurdo: se invierte la cabecera para que los botones queden en la mano izquierda del paciente */

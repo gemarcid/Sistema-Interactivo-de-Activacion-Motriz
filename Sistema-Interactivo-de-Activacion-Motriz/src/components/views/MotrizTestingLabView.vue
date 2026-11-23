@@ -1,14 +1,14 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { playClickTone, playSelectTone } from '../../composables/useAudio'
-import BalloonGame from '../games/BalloonGame.vue'
-import MotrizGameView from './MotrizGameView.vue'
+import BalloonOriginalCIF from '../games/balloons/BalloonOriginalCIF.vue'
+import BalloonColorGame from '../games/balloons/BalloonColorGame.vue'
 import MotrizWalkTestView from './MotrizWalkTestView.vue'
 import MotrizMovementIcon from '../games/MotrizMovementIcon.vue'
 import MotrizMathOrderView from './MotrizMathOrderView.vue'
 import { movements } from '../../game/moveRemember/round'
 
-const emit = defineEmits(['back', 'open-move-remember', 'open-math-order'])
+const emit = defineEmits(['back', 'open-move-remember', 'subgame-active'])
 const memoryIcon = movements.find(({ id }) => id === 'both-arms-up')
 
 function openMoveRemember() {
@@ -22,6 +22,16 @@ function openMathOrder() {
 }
 
 const activeTab = ref('hub') // 'hub' | 'unach-cif' | 'alcanza-colores' | 'caminata-lenta'
+
+watch(activeTab, (val) => {
+  emit('subgame-active', val !== 'hub')
+})
+
+defineExpose({
+  goBackToHub: () => {
+    activeTab.value = 'hub'
+  },
+})
 
 function handleSelect(tab) {
   playSelectTone()
@@ -42,34 +52,16 @@ function handleBack() {
   <div class="lab-container">
     <!-- Sub-Game: UNACH CIF Test Game -->
     <div v-if="activeTab === 'unach-cif'" class="subgame-wrapper cif-theme">
-      <div class="subgame-nav">
-        <button type="button" class="btn-motriz-secondary btn-nav-back" @click="activeTab = 'hub'">
-          ← Volver a Zona de Pruebas
-        </button>
-        <span class="subgame-title">Juego de Prueba UNACH · Desafío CIF</span>
-      </div>
-      <BalloonGame />
+      <BalloonOriginalCIF />
     </div>
 
-    <!-- Sub-Game: Prototype Balloons -->
+    <!-- Sub-Game: Balloon Color Game -->
     <div v-else-if="activeTab === 'alcanza-colores'" class="subgame-wrapper">
-      <div class="subgame-nav">
-        <button type="button" class="btn-motriz-secondary btn-nav-back" @click="activeTab = 'hub'">
-          ← Volver a Zona de Pruebas
-        </button>
-        <span class="subgame-title">Prototipo Alcanza los Colores</span>
-      </div>
-      <MotrizGameView @finish="activeTab = 'hub'" @exit="activeTab = 'hub'" />
+      <BalloonColorGame @finish="activeTab = 'hub'" @exit="activeTab = 'hub'" />
     </div>
 
     <!-- Sub-Game: Caminata Lenta -->
     <div v-else-if="activeTab === 'caminata-lenta'" class="subgame-wrapper">
-      <div class="subgame-nav">
-        <button type="button" class="btn-motriz-secondary btn-nav-back" @click="activeTab = 'hub'">
-          ← Volver a Zona de Pruebas
-        </button>
-        <span class="subgame-title">Prototipo de Caminata Lenta</span>
-      </div>
       <MotrizWalkTestView @finish="activeTab = 'hub'" @exit="activeTab = 'hub'" />
     </div>
 
@@ -128,16 +120,16 @@ function handleBack() {
           </button>
         </div>
 
-        <!-- 3. Prototype Color Sphere Catcher -->
+        <!-- 3. Balloon Color Target Game -->
         <div class="lab-card" @click="handleSelect('alcanza-colores')">
           <div class="card-pill-tag tag-ready">Listo para Probar</div>
           <div class="card-icon">🎈</div>
-          <h3>Alcanza Colores</h3>
+          <h3>Globos de Colores</h3>
           <p>
-            Esferas en tonos cálidos adaptadas a la visión del paciente con feedback motivacional y multiplicador.
+            Mecánica cognitivo-motora: indicación del color objetivo en la parte superior, combo dinámico y discriminación selectiva.
           </p>
           <button type="button" class="btn-motriz-primary btn-launch">
-            Abrir Prototipo
+            Abrir Juego
           </button>
         </div>
 
@@ -297,7 +289,9 @@ function handleBack() {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  background: transparent;
+  height: calc(100vh - 88px);
+  max-height: calc(100vh - 88px);
+  overflow: hidden;
 }
 
 .subgame-nav {

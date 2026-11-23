@@ -2,6 +2,11 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // Expone el objeto 'apiSiam' en window (window.apiSiam) para usarlo en Vue
 contextBridge.exposeInMainWorld('apiSiam', {
+    reportes: {
+        iniciar: (datos) => ipcRenderer.invoke('reportes:iniciar', datos),
+        guardar: (datos) => ipcRenderer.invoke('reportes:guardar', datos),
+        listar: (datos) => ipcRenderer.invoke('reportes:listar', datos)
+    },
     pacientes: {
         crear: (datosPaciente) => ipcRenderer.invoke('pacientes:crearPerfil', datosPaciente),
         crearPerfil: (datosPaciente) => ipcRenderer.invoke('pacientes:crearPerfil', datosPaciente),

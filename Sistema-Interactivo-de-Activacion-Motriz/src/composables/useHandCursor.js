@@ -5,6 +5,7 @@ import { useProfiles } from './useProfiles'
 // Global hand cursor state
 export const handCursorState = reactive({
   disabled: false, // <-- Propiedad para silenciar/apagar el cursor a demanda
+  onlyShowOnHover: false, // <-- En juegos: solo se muestra al pasar la mano sobre botones
   active: false,
   x: window.innerWidth / 2,
   y: window.innerHeight / 2,
@@ -154,10 +155,15 @@ export function useHandCursor() {
     deactivateCursor()
   }
 
+  function setOnlyShowOnHover(value) {
+    handCursorState.onlyShowOnHover = Boolean(value)
+  }
+
   return {
     handCursorState,
     updateHandCursor,
     setHandCursorEnabled,
     setHandCursorArea,
+    setOnlyShowOnHover,
   }
 }
