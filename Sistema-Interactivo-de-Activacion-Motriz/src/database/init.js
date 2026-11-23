@@ -1,6 +1,8 @@
 import db from './connection.js';
+let initialization;
 
 export function initDatabase() {
+    if (initialization) return initialization;
     const schema = `
         PRAGMA foreign_keys = ON;
 
@@ -224,10 +226,11 @@ LEFT JOIN telemetria AS t
         COMMIT;
     `;
 
-    db.exec(schema, (err) => {
+    initialization = new Promise((resolve, reject) => db.exec(schema, (err) => {
         if (err) {
             console.error('❌ Error al inicializar la base de datos:', err.message);
             db.run('ROLLBACK;');
+            reject(err);
         } else {
             console.log('✅ Estructura SIAM construida correctamente.');
 
@@ -251,7 +254,14 @@ LEFT JOIN telemetria AS t
                         });
                     }
                 }
+                db.exec(`CREATE TABLE IF NOT EXISTS sesion_rendimiento (
+                    clave TEXT PRIMARY KEY,
+                    id_sesion INTEGER NOT NULL UNIQUE REFERENCES sesion(id_sesion) ON DELETE CASCADE,
+                    id_perfil INTEGER NOT NULL REFERENCES perfil(id_perfil),
+                    revision INTEGER NOT NULL DEFAULT 0
+                );`, (migrationError) => migrationError ? reject(migrationError) : resolve());
             });
         }
-    });
+    }));
+    return initialization;
 }

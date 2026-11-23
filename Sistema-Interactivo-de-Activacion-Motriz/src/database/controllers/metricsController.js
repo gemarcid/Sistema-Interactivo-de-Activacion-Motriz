@@ -1,6 +1,6 @@
-const db = require('../connection');
+import db from '../connection.js';
 
-module.exports = {
+export default {
     iniciarSesion: (event, sesion) => {
         return new Promise((resolve, reject) => {
             const sql = `INSERT INTO sesion (id_perfil, id_minijuego, estado) VALUES (?, ?, 'INICIADA')`;

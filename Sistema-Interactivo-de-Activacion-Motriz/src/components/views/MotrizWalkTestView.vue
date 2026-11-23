@@ -2,13 +2,35 @@
 import { ref, reactive, computed, watch, onBeforeUnmount } from 'vue'
 import { useCamera } from '../../composables/useCamera'
 import MotrizCalibrationView from './MotrizCalibrationView.vue'
+import { useActivityRecorder } from '../../composables/useActivityRecorder'
 
-const emit = defineEmits(['finish', 'exit'])
+const emit = defineEmits(['finish', 'exit', 'activity'])
 
 const { bodyState, bodyDetected } = useCamera()
 
 // Fases del módulo: 'calibration' -> 'running' -> 'finished'
 const phase = ref('calibration')
+const recorder = useActivityRecorder(() => 'exercise', [11, 12, 23, 24, 25, 26, 27, 28],
+  (timing) => emitWalk(timing, 'INICIADA'))
+let measuredFrames = 0
+let walkRecorded = false
+
+function recordWalk(status) {
+  if (walkRecorded) return
+  const timing = recorder.stop()
+  if (!timing) return
+  walkRecorded = true
+  emitWalk(timing, status)
+}
+
+function emitWalk(timing, status) {
+  emit('activity', {
+    ...timing, status, ...(status === 'INICIADA' ? {} : { finishedAt: new Date().toISOString() }), measuredFrames,
+    ...JSON.parse(JSON.stringify(metrics)),
+    cadence: cadencePerMin.value,
+    calibration: JSON.parse(JSON.stringify(baseline)),
+  })
+}
 
 // Duración corta para adulto mayor (30 segundos)
 const TEST_DURATION = 30
@@ -199,6 +221,9 @@ function handleStartAfterCalibration() {
   metrics.rightLegUp = false
 
   timeLeft.value = TEST_DURATION
+  measuredFrames = 0
+  walkRecorded = false
+  recorder.begin('walk')
   phase.value = 'running'
 
   clearInterval(timerInterval)
@@ -214,10 +239,12 @@ function handleStartAfterCalibration() {
 
 function finishMeasurement() {
   clearInterval(timerInterval)
+  recordWalk('FINALIZADA')
   phase.value = 'finished'
 }
 
 function recalibrate() {
+  if (phase.value === 'running') recordWalk('CANCELADA')
   clearInterval(timerInterval)
   phase.value = 'calibration'
 }
@@ -227,6 +254,7 @@ watch(
   () => bodyState.landmarks,
   (lm) => {
     if (phase.value !== 'running' || !lm || lm.length < 29) return
+    if (areVisible(lm[11], lm[12], lm[23], lm[24], lm[25], lm[26], lm[27], lm[28])) measuredFrames += 1
 
     const aspect = window.innerWidth / window.innerHeight || 16 / 9
 
@@ -496,6 +524,7 @@ function drawBiomechanicalOverlay(lm) {
 }
 
 onBeforeUnmount(() => {
+  if (phase.value === 'running') recordWalk('CANCELADA')
   clearInterval(timerInterval)
 })
 </script>

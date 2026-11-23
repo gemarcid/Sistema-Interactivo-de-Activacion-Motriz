@@ -85,6 +85,13 @@ CREATE TABLE IF NOT EXISTS sesion (
    CONFIGURACIÓN MOTRIZ
    ========================= */
 
+CREATE TABLE IF NOT EXISTS sesion_rendimiento (
+    clave TEXT PRIMARY KEY,
+    id_sesion INTEGER NOT NULL UNIQUE REFERENCES sesion(id_sesion) ON DELETE CASCADE,
+    id_perfil INTEGER NOT NULL REFERENCES perfil(id_perfil),
+    revision INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS configuracion (
     id_configuracion INTEGER PRIMARY KEY AUTOINCREMENT,
     id_sesion INTEGER NOT NULL,

@@ -6,10 +6,11 @@ const props = defineProps({
   results: {
     type: Object,
     default: () => ({
-      score: 320,
-      hits: 18,
-      timeSpent: '1:25',
-      stars: 3,
+      score: 0,
+      hits: 0,
+      requested: 0,
+      timeSpent: '0:00',
+      stars: 0,
     }),
   },
 })
@@ -68,7 +69,7 @@ function handleFinish() {
           v-for="i in 3"
           :key="i"
           class="star-item"
-          :class="{ 'star-earned': i <= (results.stars || 3) }"
+          :class="{ 'star-earned': i <= results.stars }"
           :style="{ animationDelay: `${i * 0.2}s` }"
         >
           <svg viewBox="0 0 100 100" class="star-svg">
@@ -100,8 +101,8 @@ function handleFinish() {
             </svg>
           </div>
           <div class="metric-info">
-            <span class="metric-label">Tiempo</span>
-            <strong class="metric-value">{{ results.timeSpent || '0:45' }}</strong>
+            <span class="metric-label">Tiempo activo</span>
+            <strong class="metric-value">{{ results.timeSpent }}</strong>
           </div>
         </div>
 
@@ -113,8 +114,8 @@ function handleFinish() {
             </svg>
           </div>
           <div class="metric-info">
-            <span class="metric-label">Puntos</span>
-            <strong class="metric-value">{{ results.score || 320 }}</strong>
+            <span class="metric-label">Aciertos de memoria</span>
+            <strong class="metric-value">{{ results.score }}</strong>
           </div>
         </div>
 
@@ -127,7 +128,7 @@ function handleFinish() {
           </div>
           <div class="metric-info">
             <span class="metric-label">Movimientos correctos</span>
-            <strong class="metric-value">{{ results.hits || 18 }} / 20</strong>
+            <strong class="metric-value">{{ results.hits }} / {{ results.requested }}</strong>
           </div>
         </div>
       </div>

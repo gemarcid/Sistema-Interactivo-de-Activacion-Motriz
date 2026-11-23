@@ -8,8 +8,9 @@ import { createPoseTracker, measurePose, recognizePose } from '../../game/moveRe
 import { generateSequence, movements, ROUND_LENGTH, scoreRound } from '../../game/moveRemember/round'
 import MotrizMovementIcon from '../games/MotrizMovementIcon.vue'
 import MotrizCalibrationView from './MotrizCalibrationView.vue'
+import { useActivityRecorder } from '../../composables/useActivityRecorder'
 
-defineEmits(['exit', 'finish'])
+const emit = defineEmits(['exit', 'finish', 'activity'])
 
 const MEMORY_TIME_MS = 12000
 const movementById = new Map(movements.map((movement) => [movement.id, movement]))
@@ -30,6 +31,27 @@ const retry = ref(false)
 const hintsUsed = ref(0)
 const hint = ref(null)
 const remainingMs = ref(0)
+const recorder = useActivityRecorder(() => {
+  if (paused.value) return 'restSeconds'
+  return phase.value === 'memorize' ? 'memorySeconds' : 'exercise'
+}, [11, 12, 13, 14, 15, 16, 23, 24], (timing) => emitRound(timing, 'INICIADA'))
+let attempts = []
+
+function recordRound(status) {
+  const timing = recorder.stop()
+  if (!timing) return
+  emitRound(timing, status)
+}
+
+function emitRound(timing, status) {
+  emit('activity', {
+    ...timing, status, ...(status === 'INICIADA' ? {} : { finishedAt: new Date().toISOString() }),
+    sequence: [...sequence.value], attempts: [...attempts],
+    correct: completed.value, requested: sequence.value.length,
+    orderErrors: orderErrors.value, hints: hintsUsed.value,
+    memoryTimeSeconds: MEMORY_TIME_MS / 1000,
+  })
+}
 let memoryDeadline = 0
 let memoryTimer
 let trackingTimer
@@ -65,6 +87,7 @@ watch(() => bodyState.landmarks, (landmarks) => {
   const canCount = id !== null && (id !== 'rest' || expected === 'rest')
   const confirmed = poseTracker.observe(id, lastPoseAt, canCount)
   if (!confirmed) return
+  attempts.push({ movement: confirmed, position: completed.value, correct: confirmed === expected })
 
   if (confirmed !== expected) {
     orderErrors.value += 1
@@ -79,6 +102,7 @@ watch(() => bodyState.landmarks, (landmarks) => {
   if (completed.value === sequence.value.length) finishRound()
 })
 onBeforeUnmount(() => {
+  if (playing.value) recordRound('CANCELADA')
   stopMemoryTimer()
   clearInterval(trackingTimer)
   setHandCursorArea(null)
@@ -102,6 +126,8 @@ function startRound(repeat = false) {
   retry.value = false
   hintsUsed.value = 0
   hint.value = null
+  attempts = []
+  recorder.begin('memory')
   poseTracker = createPoseTracker()
   remainingMs.value = MEMORY_TIME_MS
   paused.value = false
@@ -123,11 +149,13 @@ function stopMemoryTimer() {
 }
 
 function startExecution() {
+  recorder.sample()
   stopMemoryTimer()
   phase.value = 'execute'
 }
 
 function togglePause() {
+  recorder.sample()
   playClickTone()
   poseTracker.interrupt()
   if (phase.value === 'memorize') {
@@ -150,6 +178,7 @@ function revealHint() {
 }
 
 function finishRound() {
+  recordRound('FINALIZADA')
   stopMemoryTimer()
   paused.value = false
   phase.value = 'results'

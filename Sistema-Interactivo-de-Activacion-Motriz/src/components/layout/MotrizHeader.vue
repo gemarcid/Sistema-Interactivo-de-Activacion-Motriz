@@ -13,7 +13,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['back', 'open-settings', 'open-help', 'open-profiles', 'open-patient-form'])
+const emit = defineEmits(['back', 'open-settings', 'open-help', 'open-profiles', 'open-patient-form', 'open-progress'])
 
 const { activeProfile, isLeftHanded, isRightHanded, dominantHand, toggleDominantHand } = useProfiles()
 
@@ -78,6 +78,9 @@ function handleToggleHand() {
 
     <!-- Header Actions (Reposicionados según la mano dominante) -->
     <div class="header-actions">
+      <button type="button" class="btn-motriz-secondary header-back-btn" @click="emit('open-progress')">
+        Reportes
+      </button>
       <!-- Indicador / Alternador de Mano Dominante -->
       <button
         type="button"

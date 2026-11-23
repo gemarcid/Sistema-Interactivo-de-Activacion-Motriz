@@ -1,11 +1,13 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
-const path = require('path');
-require('dotenv').config();
+import { app, BrowserWindow, ipcMain } from 'electron';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import 'dotenv/config';
 
-const { initDatabase } = require('../database/init');
-const authController = require('../database/controllers/authController');
-const patientController = require('../database/controllers/patientController');
-const metricsController = require('../database/controllers/metricsController');
+import { initDatabase } from '../database/init.js';
+import authController from '../database/controllers/authController.js';
+import patientController from '../database/controllers/patientController.js';
+import metricsController from '../database/controllers/metricsController.js';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function createWindow() {
     const mainWindow = new BrowserWindow({
@@ -21,12 +23,16 @@ function createWindow() {
     if (process.env.NODE_ENV === 'development') {
         mainWindow.loadURL('http://localhost:5173');
     } else {
-        mainWindow.loadFile(path.join(__dirname, '../renderer/dist/index.html'));
+        mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
     }
 }
 
-app.whenReady().then(() => {
-    initDatabase();
+app.whenReady().then(async () => {
+    await initDatabase();
+    const reportsController = (await import('../database/controllers/sessionReportsController.js')).default;
+    ipcMain.handle('reportes:iniciar', reportsController.iniciar);
+    ipcMain.handle('reportes:guardar', reportsController.guardar);
+    ipcMain.handle('reportes:listar', reportsController.listar);
 
     // Rutas IPC Auth
     ipcMain.handle('auth:crearUsuario', authController.crearUsuario);

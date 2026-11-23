@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useProfiles } from '../../composables/useProfiles'
 import { playClickTone, playSelectTone, playSuccessChime } from '../../composables/useAudio'
+import { useActivityRecorder } from '../../composables/useActivityRecorder'
 
 const props = defineProps({
   duration: {
@@ -10,7 +11,10 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['continue', 'exit'])
+const emit = defineEmits(['continue', 'exit', 'activity'])
+const recorder = useActivityRecorder(() => 'restSeconds', [],
+  (timing) => emit('activity', { ...timing, status: 'INICIADA' }))
+recorder.begin('rest')
 
 const { isLeftHanded, isRightHanded } = useProfiles()
 
@@ -30,6 +34,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearInterval(timer)
+  const timing = recorder.stop()
+  if (timing) emit('activity', { ...timing, status: 'FINALIZADA', finishedAt: new Date().toISOString() })
 })
 
 function startTimer() {

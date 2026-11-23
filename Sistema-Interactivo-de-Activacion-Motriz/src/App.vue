@@ -1,6 +1,8 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useProfiles } from './composables/useProfiles'
+import { useSessionReports } from './composables/useSessionReports'
+import { formatDuration } from './game/sessionReport'
 import MotrizBackgroundCamera from './components/layout/MotrizBackgroundCamera.vue'
 import MotrizHandCursor from './components/layout/MotrizHandCursor.vue'
 import MotrizHeader from './components/layout/MotrizHeader.vue'
@@ -18,6 +20,17 @@ import MotrizSettingsModal from './components/modals/MotrizSettingsModal.vue'
 import MotrizHelpModal from './components/modals/MotrizHelpModal.vue'
 
 const { isLeftHanded, isRightHanded, dominantHand } = useProfiles()
+const reports = useSessionReports()
+onMounted(() => reports.retrySave().catch(() => {}))
+const starting = ref(false)
+const sessionMessage = ref('')
+const completedResults = computed(() => ({
+  score: reports.totals.value.correct,
+  hits: reports.totals.value.correct,
+  requested: reports.totals.value.requested,
+  timeSpent: formatDuration(reports.totals.value.activeSeconds),
+  stars: reports.totals.value.correct === reports.totals.value.requested && reports.totals.value.orderErrors === 0 ? 3 : 1,
+}))
 
 // Estado de la vista activa en el flujo de juego
 // 'home' -> 'walk-test' -> 'rest' -> 'move-remember' -> 'completed' | 'lab'
@@ -37,8 +50,18 @@ function handleInitialFormComplete() {
 }
 
 // Inicia el flujo guiado de la sesión: arranca en la caminata
-function handleStartNewGame() {
-  currentView.value = 'walk-test'
+async function handleStartNewGame() {
+  if (starting.value) return
+  starting.value = true
+  sessionMessage.value = ''
+  try {
+    await reports.startSession()
+    currentView.value = 'walk-test'
+  } catch (error) {
+    sessionMessage.value = error.message
+  } finally {
+    starting.value = false
+  }
 }
 
 // Al terminar la caminata (30s) -> pasa a la pantalla de descanso (30s)
@@ -52,21 +75,41 @@ function handleRestContinue() {
 }
 
 // Al terminar la ronda de Mueve y Recuerda -> pasa a la pantalla de completado
-function handleMoveRememberFinish() {
+async function handleMoveRememberFinish() {
   currentView.value = 'completed'
+  await nextTick()
+  reports.closeSession('FINALIZADA').catch(() => {})
 }
 
 function handleOpenLab() {
   currentView.value = 'lab'
 }
 
-function handleOpenOriginalCIF() {
+async function handleOpenOriginalCIF() {
   showSettingsModal.value = false
   currentView.value = 'lab'
+  await nextTick()
+  reports.closeSession('CANCELADA').catch(() => {})
 }
 
-function handleExitToHome() {
+async function handleExitToHome() {
   currentView.value = 'home'
+  await nextTick()
+  reports.closeSession('CANCELADA').catch(() => {})
+}
+
+async function handleOpenMemory() {
+  if (starting.value) return
+  starting.value = true
+  sessionMessage.value = ''
+  try {
+    await reports.startSession()
+    currentView.value = 'move-remember'
+  } catch (error) {
+    sessionMessage.value = error.message
+  } finally {
+    starting.value = false
+  }
 }
 </script>
 
@@ -94,7 +137,15 @@ function handleExitToHome() {
       @open-help="showHelpModal = true"
       @open-profiles="showProfileModal = true"
       @open-patient-form="showInitialForm = true"
+      @open-progress="showProgressModal = true"
     />
+
+    <div v-if="starting || sessionMessage || reports.error.value" class="session-notice" role="status">
+      <span>{{ starting ? 'Iniciando sesión del perfil…' : (sessionMessage || reports.error.value) }}</span>
+      <button v-if="reports.error.value" type="button" class="btn-motriz-secondary" @click="reports.retrySave().catch(() => {})">
+        Reintentar guardado
+      </button>
+    </div>
 
     <!-- 4. ACTIVE VIEW LAYER (Flujo interactivo guiado) -->
     <main class="motriz-main-stage">
@@ -111,6 +162,7 @@ function handleExitToHome() {
         v-else-if="currentView === 'walk-test'"
         @finish="handleWalkTestFinish"
         @exit="handleExitToHome"
+        @activity="reports.recordActivity"
       />
 
       <!-- 3. Flujo Paso 2: Descanso de 30s (pregunta si continuar o 30s más en bucle + botón arriba) -->
@@ -119,6 +171,7 @@ function handleExitToHome() {
         :duration="30"
         @continue="handleRestContinue"
         @exit="handleExitToHome"
+        @activity="reports.recordActivity"
       />
 
       <!-- 4. Flujo Paso 3: Mueve y Recuerda (con silueta cintura para arriba + botón comenzar arriba) -->
@@ -126,6 +179,7 @@ function handleExitToHome() {
         v-else-if="currentView === 'move-remember'"
         @finish="handleMoveRememberFinish"
         @exit="handleExitToHome"
+        @activity="reports.recordActivity"
       />
 
       <!-- 5. Flujo Paso 4: Sesión Completada (Trofeo, estrellas, felicitaciones) -->
@@ -134,6 +188,8 @@ function handleExitToHome() {
         @menu="handleExitToHome"
         @next-level="handleStartNewGame"
         @finish="handleExitToHome"
+        :results="completedResults"
+        @view-progress="showProgressModal = true"
       />
 
       <!-- Calibración Independiente (si se invoca aisladamente) -->
@@ -147,7 +203,7 @@ function handleExitToHome() {
       <MotrizTestingLabView
         v-else-if="currentView === 'lab'"
         @back="handleExitToHome"
-        @open-move-remember="currentView = 'move-remember'"
+        @open-move-remember="handleOpenMemory"
       />
     </main>
 
@@ -206,5 +262,22 @@ function handleExitToHome() {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+}
+
+.session-notice {
+  position: relative;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--motriz-gold-light);
+}
+
+.session-notice button {
+  padding: 6px 12px;
+  font-size: 1rem;
 }
 </style>
