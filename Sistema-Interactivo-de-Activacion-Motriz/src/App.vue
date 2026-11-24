@@ -11,6 +11,7 @@ import MotrizCalibrationView from './components/views/MotrizCalibrationView.vue'
 import MotrizWalkTestView from './components/views/MotrizWalkTestView.vue'
 import MotrizRestView from './components/views/MotrizRestView.vue'
 import MotrizMoveRememberView from './components/views/MotrizMoveRememberView.vue'
+import MotrizMathOrderView from './components/views/MotrizMathOrderView.vue'
 import MotrizCompletedView from './components/views/MotrizCompletedView.vue'
 import MotrizTestingLabView from './components/views/MotrizTestingLabView.vue'
 import MotrizInitialForm from './components/forms/MotrizInitialForm.vue'
@@ -87,6 +88,10 @@ async function handleMoveRememberFinish() {
   currentView.value = 'completed'
   await nextTick()
   reports.closeSession('FINALIZADA').catch(() => {})
+}
+
+function handleMathOrderFinish() {
+  currentView.value = 'completed'
 }
 
 function handleOpenLab() {
@@ -202,6 +207,12 @@ function handleHeaderBack() {
         @activity="reports.recordActivity"
       />
 
+      <MotrizMathOrderView
+        v-else-if="currentView === 'math-order'"
+        @finish="handleMathOrderFinish"
+        @exit="handleExitToHome"
+      />
+
       <!-- 5. Flujo Paso 4: Sesión Completada (Trofeo, estrellas, felicitaciones) -->
       <MotrizCompletedView
         v-else-if="currentView === 'completed'"
@@ -226,6 +237,7 @@ function handleHeaderBack() {
         @back="handleExitToHome"
         @subgame-active="(active) => isLabSubgame = active"
         @open-move-remember="currentView = 'move-remember'"
+        @open-math-order="currentView = 'math-order'"
       />
     </main>
 

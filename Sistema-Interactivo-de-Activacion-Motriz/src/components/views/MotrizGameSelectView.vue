@@ -45,6 +45,16 @@ const games = [
     accentColor: '#8B5CF6',
     iconType: 'fruits',
   },
+  {
+    id: 'ordena-numeros',
+    title: 'Ordena los números',
+    subtitle: 'Resuelve la ecuación',
+    description: 'Coloca los números sueltos en las casillas vacías usando tus manos.',
+    badge: 'Cognitivo',
+    active: true,
+    accentColor: '#8C1D2C',
+    iconType: 'math',
+  },
 ]
 
 const selectedCard = ref('alcanza-colores')
@@ -124,6 +134,18 @@ function handleBack() {
               <circle cx="45" cy="120" r="4" fill="#FFFFFF" opacity="0.8" />
               <circle cx="80" cy="95" r="4" fill="#FFFFFF" opacity="0.8" />
               <circle cx="115" cy="70" r="4" fill="#FFFFFF" opacity="0.8" />
+            </svg>
+          </div>
+
+          <div v-else-if="game.iconType === 'math'" class="stage-illustration">
+            <svg viewBox="0 0 160 160" class="stage-svg">
+              <rect x="25" y="35" width="46" height="52" rx="10" fill="#8C1D2C" />
+              <text x="48" y="73" font-size="32" font-weight="900" fill="#FFFFFF" text-anchor="middle">3</text>
+              <text x="80" y="72" font-size="28" font-weight="900" fill="#8C1D2C" text-anchor="middle">+</text>
+              <rect x="90" y="35" width="46" height="52" rx="10" fill="#F59E0B" />
+              <text x="113" y="73" font-size="32" font-weight="900" fill="#FFFFFF" text-anchor="middle">1</text>
+              <rect x="52" y="100" width="56" height="42" rx="8" fill="#EDE4D8" stroke="#8C1D2C" stroke-width="3" />
+              <text x="80" y="132" font-size="26" font-weight="900" fill="#8C1D2C" text-anchor="middle">= 4</text>
             </svg>
           </div>
 

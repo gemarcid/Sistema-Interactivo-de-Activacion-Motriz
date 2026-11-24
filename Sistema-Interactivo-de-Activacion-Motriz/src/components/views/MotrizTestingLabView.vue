@@ -5,6 +5,7 @@ import BalloonOriginalCIF from '../games/balloons/BalloonOriginalCIF.vue'
 import BalloonColorGame from '../games/balloons/BalloonColorGame.vue'
 import MotrizWalkTestView from './MotrizWalkTestView.vue'
 import MotrizMovementIcon from '../games/MotrizMovementIcon.vue'
+import MotrizMathOrderView from './MotrizMathOrderView.vue'
 import { movements } from '../../game/moveRemember/round'
 
 const emit = defineEmits(['back', 'open-move-remember', 'subgame-active'])
@@ -13,6 +14,11 @@ const memoryIcon = movements.find(({ id }) => id === 'both-arms-up')
 function openMoveRemember() {
   playSelectTone()
   emit('open-move-remember')
+}
+
+function openMathOrder() {
+  playSelectTone()
+  emit('open-math-order')
 }
 
 const activeTab = ref('hub') // 'hub' | 'unach-cif' | 'alcanza-colores' | 'caminata-lenta'
@@ -59,6 +65,16 @@ function handleBack() {
       <MotrizWalkTestView @finish="activeTab = 'hub'" @exit="activeTab = 'hub'" />
     </div>
 
+    <div v-else-if="activeTab === 'ordena-numeros'" class="subgame-wrapper">
+      <div class="subgame-nav">
+        <button type="button" class="btn-motriz-secondary btn-nav-back" @click="activeTab = 'hub'">
+          ← Volver a Zona de Pruebas
+        </button>
+        <span class="subgame-title">Ordena los Números</span>
+      </div>
+      <MotrizMathOrderView @finish="activeTab = 'hub'" @exit="activeTab = 'hub'" />
+    </div>
+
     <!-- Lab Hub Main View -->
     <div v-else class="lab-hub-content">
       <div class="lab-header">
@@ -69,6 +85,18 @@ function handleBack() {
       </div>
 
       <div class="lab-cards-grid">
+        <div class="lab-card" @click="openMathOrder">
+          <div class="card-pill-tag tag-ready">Listo para jugar</div>
+          <div class="card-icon">🔢</div>
+          <h3>Ordena los Números</h3>
+          <p>
+            Ecuaciones matemáticas simples con números del 1 al 10 para estimulación cognitiva y motriz.
+          </p>
+          <button type="button" class="btn-motriz-primary btn-launch">
+            Abrir Ordena Números
+          </button>
+        </div>
+
         <div class="lab-card" @click="openMoveRemember">
           <div class="card-pill-tag tag-ready">Listo para jugar</div>
           <MotrizMovementIcon :arms="memoryIcon.arms" class="card-icon memory-icon" />
@@ -271,7 +299,8 @@ function handleBack() {
   align-items: center;
   justify-content: space-between;
   padding: 12px 24px;
-  background: rgba(255, 253, 249, 0.95);
+  background: rgba(255, 253, 249, 0.85);
+  backdrop-filter: blur(10px);
   border-bottom: 2px solid var(--motriz-card-border);
 }
 
